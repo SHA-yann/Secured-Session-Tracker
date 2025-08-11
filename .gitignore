@@ -1,0 +1,21 @@
+# Java
+target/
+*.class
+
+# Maven
+.mvn/
+!.mvn/wrapper/maven-wrapper.jar
+
+# IntelliJ / Eclipse
+.idea/
+*.iml
+.project
+.classpath
+
+# Node
+node_modules/
+dist/
+
+# OS files
+.DS_Store
+Thumbs.db
