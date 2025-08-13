@@ -8,7 +8,7 @@ A full-stack portfolio project using:
 **Version Control:** Git (feature-branch workflow)
 
 ## Project Purpose
-Demonstrate the ability to design, develop, test, and document a complete application.
+Demonstrate the ability to design, develop, test, and document a complete for job postings and applications.
 
 ## Technologies
 Java 17
@@ -27,5 +27,38 @@ Push branch and create Pull Request (PR)
 Merge into `dev` after review
 Merge into `main` after feature completion
 
+## Branching Strategy
+main → stable releases
+dev → integration branch
+feature/* → individual tasks
+
+## Requirements
+JDK 17
+Git 
+Node.js 20+
+Angular CLI 15+
+Maven 3.9+
+PostgreSQL 15+
+
 ## Setup Instructions
-*(To be filled during setup steps)*
+ ### 1. clone repository
+ git clone https://github.com/SHA-yann/taskmanager
+ cd taskmanager
+ ### 2. configure database
+ install PostgreSQL (runtime), H2(tests)
+ create database
+ configure credentials in backend/src/main/resources/application.properties
+
+ ### 3. backend
+ cd backend
+ mvn clean install
+ - Run tests: mvn test
+ - Run app: mvn spring-boot:run
+
+ ### 4. frontend
+ cd../frontend
+ npm install
+
+## Feature User Management
+- using TDD
+- UserServiceTest checks the creation of a user
