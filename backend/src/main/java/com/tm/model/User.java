@@ -2,14 +2,22 @@ package com.tm.model;
 
 public class User {
 
-	public Object getName() {
-		// TODO Auto-generated method stub
-		return null;
+	private String name;
+	private String email;
+	
+	public User(String name, String email) {
+		this.name= name;
+		this.email= email;
+	}
+	
+	public String getName() {
+		
+		return name;
 	}
 
-	public Object getEmail() {
-		// TODO Auto-generated method stub
-		return null;
+	public String getEmail() {
+		
+		return email;
 	}
 
 }

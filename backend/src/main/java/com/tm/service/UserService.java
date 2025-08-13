@@ -4,9 +4,9 @@ import com.tm.model.User;
 
 public class UserService {
 
-	public User createUser(String string, String string2) {
+	public User createUser(String name, String email) {
 		
-		return null;
+		return new User(name, email);
 	}
 
 }

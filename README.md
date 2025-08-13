@@ -61,4 +61,4 @@ PostgreSQL 15+
 
 ## Feature User Management
 - using TDD
-- UserServiceTest checks the creation of a user
+- UserServiceTest tests the creation of a user
