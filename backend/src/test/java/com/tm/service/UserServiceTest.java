@@ -1,12 +1,12 @@
 package com.tm.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
+import org.mockito.invocation.InvocationOnMock;
 
 import static org.mockito.Mockito.*;
 
@@ -30,20 +30,21 @@ class UserServiceTest {
 	void createUser_shouldPersistAndReturnEntity() {
 
 		User toSave = new User();
-		toSave.setName("Yann");
+		toSave.setUsername("Yann");
+		toSave.setPassword("secure_123");
 		toSave.setEmail("yannsteve@ymail.fr");
+		toSave.setRole("ADMIN");
 		
-		User saved = new User();
-		saved.setId(12L);
-		saved.setName("Yann");
-		saved.setEmail("yannsteve@ymail.fr");
+		when(userR.save(any(User.class))).thenAnswer(Invocation->Invocation.getArgument(0));
 		
-		when(userR.save(any(User.class))).thenReturn(saved);
+		User result = userS.createUser(toSave);
 		
-		User result = userS.createUser("Yann", "yannsteve@ymail.fr");
+		assertNotNull(result);
 		
-		assertThat(result.getId()).isEqualTo(12L);
-		assertThat(result.getEmail()).isEqualTo("yannsteve@ymail.fr");
+		assertEquals("Yann",result.getUsername());
+		assertEquals("yannsteve@ymail.fr",result.getEmail());
+		assertEquals("secure_123", result.getPassword());
+		assertEquals("ADMIN", result.getRole());
 		verify(userR, times(1)).save(any(User.class));
 	}
 }

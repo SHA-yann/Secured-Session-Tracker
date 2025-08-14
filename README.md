@@ -20,7 +20,7 @@ Jasmine/Karma
 
 ## Development Workflow
 Create feature branch
-Write tests before code (TDD)
+Writing one feature with TDD
 Commit frequently with meaningful messages
 Push branch and create Pull Request (PR)
 Merge into `dev` after review
@@ -58,6 +58,9 @@ PostgreSQL 15+
  cd../frontend
  npm install
 
-## Feature User-management (TDD)
+## Feature User-registration (TDD)
 - UserServiceTest tests the creation of a user
-- UserRepositoryTest test the effective persistence of a user in the db
+- UserRepositoryTest tests the persistence of a user in the db
+- UserControllerTest tests registration of a user via the REST API 
+
+a complete user will need a password and role, this implies the refactoring of user, service and repository and tests

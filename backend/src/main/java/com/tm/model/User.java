@@ -9,9 +9,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Entity
-@Table(name="users",uniqueConstraints = {
-		@UniqueConstraint(name = "uk_users_email", columnNames = "email")
-})
+@Table(name="users")
 @Getter @Setter 
 public class User {
 
@@ -20,13 +18,19 @@ public class User {
 	private Long Id;
 	
 	@NotBlank
-	@Column(nullable=false, length=20)
-	private String name;
+	@Column(nullable=false, unique=true, length=20)
+	private String Username;
 	
-	@NotBlank
 	@Email
 	@Column(nullable=false, length=50)
 	private String email;
+	
+	@NotBlank
+	@Column(nullable=false)
+	private String password;
+	
+	@Column(nullable=false)
+	private String role;
 	
 	@Column(nullable=false, updatable=false)
 	private Instant createdAt;

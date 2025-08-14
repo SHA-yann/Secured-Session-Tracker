@@ -15,12 +15,7 @@ public class UserService {
 		this.uRep=uRep;
 	}
 
-	@Transactional
-	public User createUser(String name, String email) {
-		
-		User u = new User();
-		u.setName(name);
-		u.setEmail(email);
+	public User createUser(User u) {
 		
 		return uRep.save(u);
 	}

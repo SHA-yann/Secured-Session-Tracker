@@ -1,6 +1,7 @@
 package com.tm.repository;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.Optional;
 
@@ -17,15 +18,21 @@ class UserRepositoryTest {
 	private UserRepository uRep;
 	
 	@Test
-	void saveAndFindBymail_shouldPersistAndRetrieve(){
-		User u= new User();
-		u.setName("Yann");
-		u.setEmail("yannsteve@ymail.fr");
-		User saved= uRep.saveAndFlush(u);
-		assertThat(saved.getId()).isNotNull();
+	void shouldSaveAndFindUserWithPasswordAndRole(){
 		
-		Optional<User> mail= uRep.findByEmail("yannsteve@ymail.fr");
-		assertThat(mail).isPresent();
-		assertThat(mail.get().getName()).isEqualTo("Yann");
+		User u= new User();
+		u.setUsername("Yann");
+		u.setPassword("secure_123");
+		u.setRole("ADMIN");
+		u.setEmail("yannsteve@ymail.fr");
+		
+		User saved=uRep.save(u);
+		
+		Optional<User> found= uRep.findById(saved.getId());
+		assertNotNull(found);
+		assertEquals("Yann", found.get().getUsername());
+		assertEquals("secure_123", found.get().getPassword());
+		assertEquals("ADMIN", found.get().getRole());
+		
 	}
 }
