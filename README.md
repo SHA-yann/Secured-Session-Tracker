@@ -17,7 +17,6 @@ Angular 19
 PostgreSQL
 JUnit 5
 Jasmine/Karma
-Docker (optional for DB)
 
 ## Development Workflow
 Create feature branch
@@ -59,6 +58,6 @@ PostgreSQL 15+
  cd../frontend
  npm install
 
-## Feature User Management
-- using TDD
+## Feature User-management (TDD)
 - UserServiceTest tests the creation of a user
+- UserRepositoryTest test the effective persistence of a user in the db

@@ -1,5 +1,8 @@
 package com.tm.model;
 
+import jakarta.persistence.Entity;
+
+@Entity
 public class User {
 
 	private String name;
@@ -18,6 +21,11 @@ public class User {
 	public String getEmail() {
 		
 		return email;
+	}
+
+	public Object getId() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }
