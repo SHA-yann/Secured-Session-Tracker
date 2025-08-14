@@ -10,6 +10,6 @@ import com.tm.model.User;
 @Repository
 public interface UserRepository extends JpaRepository<User, Long>{
 
-	Optional<User> findByEmail(String string);	
+	Optional<User> findByEmail(String email);	
 
 }
