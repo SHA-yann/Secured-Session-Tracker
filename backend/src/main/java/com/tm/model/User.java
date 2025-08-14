@@ -47,9 +47,4 @@ public class User {
 		updatedAt=Instant.now();
 	}
 
-	public User(@NotBlank String name, @NotBlank @Email String email) {
-		super();
-		this.name = name;
-		this.email = email;
-	}
 }

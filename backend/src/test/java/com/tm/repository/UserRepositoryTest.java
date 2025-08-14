@@ -18,8 +18,9 @@ class UserRepositoryTest {
 	
 	@Test
 	void saveAndFindBymail_shouldPersistAndRetrieve(){
-		User u= new User("Yann","yannsteve@ymail.fr");
-		
+		User u= new User();
+		u.setName("Yann");
+		u.setEmail("yannsteve@ymail.fr");
 		User saved= uRep.saveAndFlush(u);
 		assertThat(saved.getId()).isNotNull();
 		
