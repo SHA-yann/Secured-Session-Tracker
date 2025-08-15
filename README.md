@@ -58,7 +58,7 @@ PostgreSQL 15+
  cd../frontend
  npm install
 
-## Feature User-registration (TDD)
+## Feature register-user (TDD)
 - UserServiceTest tests the creation of a user
 - UserRepositoryTest tests the persistence of a user in the db
 - UserControllerTest tests registration of a user via the REST API 
