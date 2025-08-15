@@ -62,5 +62,3 @@ PostgreSQL 15+
 - UserServiceTest tests the creation of a user
 - UserRepositoryTest tests the persistence of a user in the db
 - UserControllerTest tests registration of a user via the REST API 
-
-a complete user will need a password and role, this implies the refactoring of user, service and repository and tests

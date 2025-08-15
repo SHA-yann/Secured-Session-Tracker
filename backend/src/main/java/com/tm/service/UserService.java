@@ -15,6 +15,7 @@ public class UserService {
 		this.uRep=uRep;
 	}
 
+	@Transactional
 	public User createUser(User u) {
 		
 		return uRep.save(u);
