@@ -2,10 +2,11 @@ name: test CI with Maven
 
 on:
   push:
-    branches: [ "feature/**" ]
+    branches: feature/**
   pull_request:
-    branches: [ "dev" ]
-
+    branches: dev
+  
+  
 jobs:
   test:
   
