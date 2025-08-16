@@ -1,5 +1,4 @@
-
-name: Java CI with Maven
+name: test CI with Maven
 
 on:
   push:
