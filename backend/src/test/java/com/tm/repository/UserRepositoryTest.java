@@ -18,7 +18,7 @@ import com.tm.model.User;
 class UserRepositoryTest {
 	
 	@Autowired
-	private UserRepository uRep;
+	private UserRepository userRepository;
 	
 	private User u1;
 	private User u2;
@@ -33,9 +33,9 @@ class UserRepositoryTest {
 	@Test
 	void shouldSaveAndFindUserWithPasswordAndRole(){
 		
-		User saved=uRep.save(u2);
+		User saved=userRepository.save(u2);
 		
-		Optional<User> found= uRep.findById(saved.getId());
+		Optional<User> found= userRepository.findById(saved.getId());
 		assertNotNull(found);
 		assertEquals("Yann", found.get().getUsername());
 		assertEquals("secure_123", found.get().getPassword());
@@ -46,10 +46,10 @@ class UserRepositoryTest {
 	@Test
 	void findAll_returnsUsers() {
 		
-		uRep.save(u1);
-		uRep.save(u2);
+		userRepository.save(u1);
+		userRepository.save(u2);
 		
-		List<User> users = uRep.findAll();
+		List<User> users = userRepository.findAll();
 		
 		assertThat(users).hasSize(2);
 		assertThat(users.get(0).getUsername()).isIn("john","Yann");
@@ -58,7 +58,7 @@ class UserRepositoryTest {
 	@Test
 	void findAll_whenEmptyList() {
 		
-		List<User> users= uRep.findAll();
+		List<User> users= userRepository.findAll();
 		
 		assertThat(users).isEmpty();
 	}
@@ -66,9 +66,9 @@ class UserRepositoryTest {
 	@Test
 	void findByEmail_shouldReturnUserWhenExists() {
 		
-		uRep.save(u1);
+		userRepository.save(u1);
 		
-		Optional<User> found= uRep.findByEmail("yannsteve@ymail.fr");
+		Optional<User> found= userRepository.findByEmail("john@free.fr");
 		
 		assertThat(found).isPresent();
 		assertThat(found.get().getPassword()).isEqualTo("secure_123");
@@ -77,7 +77,7 @@ class UserRepositoryTest {
 	@Test
 	void findByEmail_shouldReturnUserWhenNotExists() {
 		
-		Optional<User> found= uRep.findByEmail("franck@sfr.fr");
+		Optional<User> found= userRepository.findByEmail("franck@sfr.fr");
 		
 		assertThat(found).isNotPresent();
 	}

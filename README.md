@@ -65,5 +65,6 @@ PostgreSQL 15+
 - implementing User, UserController, UserService, UserRepository
 
 ## Feature search-user:GET (Agile syle)
-- implementing getAllusers(when empty list), find a user with Id(when not found),find a user by mail(when not found)
-- integrating on service and controller layers with tests
+- getting Allusers(when empty list), finding a user by Id(when not found), or by mail(when not found)
+- implementing all GET methods from controller to repository layer(if needed) with tests
+

@@ -11,6 +11,7 @@ import static org.mockito.Mockito.*;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import com.tm.model.User;
 import com.tm.repository.UserRepository;
@@ -18,10 +19,10 @@ import com.tm.repository.UserRepository;
 class UserServiceTest {
 
 	@Mock
-	private UserRepository userR;
+	private UserRepository userRepository;
 	
 	@InjectMocks
-	private UserService userS;
+	private UserService userService;
 	
 	private User toSave;
 	private User u1;
@@ -36,9 +37,9 @@ class UserServiceTest {
 	@Test
 	void createUser_shouldPersistAndReturnEntity() {
 		
-		when(userR.save(any(User.class))).thenAnswer(Invocation->Invocation.getArgument(0));
+		when(userRepository.save(any(User.class))).thenAnswer(Invocation->Invocation.getArgument(0));
 		
-		User result = userS.createUser(toSave);
+		User result = userService.createUser(toSave);
 		
 		assertNotNull(result);
 		
@@ -46,35 +47,80 @@ class UserServiceTest {
 		assertEquals("yannsteve@ymail.fr",result.getEmail());
 		assertEquals("secure_123", result.getPassword());
 		assertEquals("ADMIN", result.getRole());
-		verify(userR, times(1)).save(any(User.class));
+		verify(userRepository, times(1)).save(any(User.class));
 	}
 	
 	@Test
 	void test_souldreturnAllusers() {
 		
-		when(userR.findAll()).thenReturn(java.util.Arrays.asList(toSave,u1));
+		when(userRepository.findAll()).thenReturn(java.util.Arrays.asList(toSave,u1));
 		
-		List<User> result = userS.getAllUsers();
+		List<User> result = userService.getAllUsers();
 				
 		assertThat(result).hasSize(2);
 		assertThat(result.get(1).getUsername()).isEqualTo("john");
-		verify(userR, times(1)).findAll();
+		verify(userRepository, times(1)).findAll();
 	}
 	
 	@Test
 	void test_emptyList() {
 		
-		when(userR.findAll()).thenReturn(Collections.emptyList());
+		when(userRepository.findAll()).thenReturn(Collections.emptyList());
 		
-		List<User> result= userS.getAllUsers();
+		List<User> result= userService.getAllUsers();
 		
 		assertThat(result).isEmpty();
-		verify(userR, times(1)).findAll();
+		verify(userRepository, times(1)).findAll();
 	}
 	
 	@Test
-	void test_shouldReturnUser_when_foundById() {
+	void test_foundById() {
 		
+		when(userRepository.findById(2L)).thenReturn(Optional.of(u1));
 		
+		Optional<User> result = userService.getUserById(2L);
+		
+		assertThat(result).isPresent();
+		assertThat(result.get().getEmail()).isEqualTo("john@free.fr");
+		
+		verify(userRepository, times(1)).findById(2L);
+		
+	}
+	
+	@Test
+	void test_notFoundById() {
+		
+		when(userRepository.findById(2L)).thenReturn(Optional.empty());
+		
+		Optional<User> result = userService.getUserById(2L);
+		
+		assertThat(result).isNotPresent();
+		verify(userRepository, times(1)).findById(2L);
+	}
+	
+	@Test
+	void test_foundByEmail() {
+		
+		when(userRepository.findByEmail("john@free.fr")).thenReturn(Optional.of(u1));
+		
+		Optional<User> result = userService.getUserByEmail("john@free.fr");
+		
+		assertThat(result).isPresent();
+		assertThat(result.get().getUsername()).isEqualTo("john");
+		
+		verify(userRepository, times(1)).findByEmail("john@free.fr");
+		
+	}
+	
+	@Test
+	void test_notfoundByEmail() {
+		
+when(userRepository.findByEmail("frank@wanado.fr")).thenReturn(Optional.empty());
+		
+		Optional<User> result = userService.getUserByEmail("frank@wanado.fr");
+		
+		assertThat(result).isNotPresent();
+		
+		verify(userRepository, times(1)).findByEmail("frank@wanado.fr");
 	}
 }

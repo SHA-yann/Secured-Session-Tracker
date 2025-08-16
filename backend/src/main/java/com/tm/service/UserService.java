@@ -1,6 +1,7 @@
 package com.tm.service;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,20 +12,29 @@ import com.tm.repository.UserRepository;
 @Service
 public class UserService {
 	
-	private final UserRepository uRep;
+	private final UserRepository userRepository;
 	
-	public UserService(UserRepository uRep) {
-		this.uRep=uRep;
+	public UserService(UserRepository userRepository) {
+		this.userRepository=userRepository;
 	}
 
 	@Transactional
 	public User createUser(User u) {
-		
-		return uRep.save(u);
+		return userRepository.save(u);
 	}
 	
 	public List<User> getAllUsers(){
-		return uRep.findAll();
+		return userRepository.findAll();
+	}
+
+	public Optional<User> getUserById(long l) {
+	
+		return userRepository.findById(l);
+	}
+
+	public Optional<User> getUserByEmail(String email) {
+
+		return userRepository.findByEmail(email);
 	}
 
 }
