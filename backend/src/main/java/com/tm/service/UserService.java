@@ -1,5 +1,7 @@
 package com.tm.service;
 
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +21,10 @@ public class UserService {
 	public User createUser(User u) {
 		
 		return uRep.save(u);
+	}
+	
+	public List<User> getAllUsers(){
+		return uRep.findAll();
 	}
 
 }
