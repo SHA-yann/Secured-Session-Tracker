@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -164,5 +165,23 @@ class UserControllerTest {
 				.andExpect(status().isNotFound());
 		
 		verify(userService, times(1)).updateUser(eq(99L),any(User.class));
+	}
+	
+	@Test
+	void test_DeleteUser_found() throws Exception{
+		
+		when(userService.deleteUser(2L)).thenReturn(true);
+		
+		mockMvc.perform(delete("/api/users/2")).andExpect(status().isNoContent());
+		verify(userService, times(1)).deleteUser((2L));
+	}
+	
+	@Test
+	void test_DeleteUser_notFound() throws Exception{
+		
+		when(userService.deleteUser(99L)).thenReturn(false);
+		
+		mockMvc.perform(delete("/api/users/99")).andExpect(status().isNotFound());
+		verify(userService, times(1)).deleteUser((99L));
 	}
 }

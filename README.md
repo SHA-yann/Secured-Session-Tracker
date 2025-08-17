@@ -58,7 +58,7 @@ PostgreSQL 15+
  cd../frontend
  npm install
 
-## Feature register-user:POST (TDD)  on branch feature/create-user
+## Feature register-user:POST (TDD)  on branch feature/register-user
 - UserServiceTest tests the creation of a user
 - UserRepositoryTest tests the persistence of a user in the db
 - UserControllerTest tests registration of a user via the REST API 
@@ -74,3 +74,4 @@ PostgreSQL 15+
 
 ## Feature delete-user:DELETE (Agile)  on branch feature/delete-user
 - implementing on the service layer and tests
+- implementing on the controller layer and tests
