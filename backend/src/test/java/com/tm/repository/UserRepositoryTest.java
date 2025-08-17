@@ -36,7 +36,8 @@ class UserRepositoryTest {
 		User saved=userRepository.save(u2);
 		
 		Optional<User> found= userRepository.findById(saved.getId());
-		assertNotNull(found);
+		
+    assertNotNull(found);
 		assertEquals("Yann", found.get().getUsername());
 		assertEquals("secure_123", found.get().getPassword());
 		assertEquals("ADMIN", found.get().getRole());
@@ -81,4 +82,5 @@ class UserRepositoryTest {
 		
 		assertThat(found).isNotPresent();
 	}
+
 }

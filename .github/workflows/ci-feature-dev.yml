@@ -1,0 +1,28 @@
+name: CI on dev with Maven
+
+on:
+  push:
+    branches: [dev,"feature/**"]
+  pull_request:
+    branches: dev
+  
+jobs:
+  test:
+  
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up JDK
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        architecture: x64
+        cache: maven
+      
+    - name: Run Maven tests
+      run: 
+        cd backend && mvn -B -U clean test

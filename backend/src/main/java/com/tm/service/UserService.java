@@ -20,11 +20,13 @@ public class UserService {
 
 	@Transactional
 	public User createUser(User u) {
+
 		return userRepository.save(u);
 	}
 	
 	public List<User> getAllUsers(){
-		return userRepository.findAll();
+		
+    return userRepository.findAll();
 	}
 
 	public Optional<User> getUserById(long l) {
