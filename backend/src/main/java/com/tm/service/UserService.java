@@ -37,4 +37,15 @@ public class UserService {
 		return userRepository.findByEmail(email);
 	}
 
+	public Optional<User> updateUser(long id, User update) {
+		
+		return userRepository.findById(id).map(found->{found.setUsername(update.getUsername());
+				found.setPassword(update.getPassword());
+				found.setEmail(update.getEmail());
+				found.setRole(update.getRole());
+				return userRepository.save(found);
+			
+		});
+	}
+
 }

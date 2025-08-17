@@ -123,4 +123,35 @@ when(userRepository.findByEmail("frank@wanado.fr")).thenReturn(Optional.empty())
 		
 		verify(userRepository, times(1)).findByEmail("frank@wanado.fr");
 	}
+	
+	@Test
+	void test_UpdateUser_found() {
+		
+		when(userRepository.findById(2L)).thenReturn(Optional.of(toSave));
+		
+		when(userRepository.save(any(User.class))).thenAnswer(invocation->invocation.getArgument(0));
+		
+		Optional<User> result= userService.updateUser(2L,u1);
+		
+		assertThat(result).isPresent();
+		assertThat(result.get().getUsername()).isEqualTo("john");
+		assertThat(result.get().getPassword()).isEqualTo("secure_123");
+		assertThat(result.get().getRole()).isEqualTo("USER");
+		
+		verify(userRepository, times(1)).findById(2L);
+		verify(userRepository, times(1)).save(toSave);
+	}
+	
+	@Test
+	void test_UpdateUser_notFound() {
+		
+		when(userRepository.findById(99L)).thenReturn(Optional.empty());
+		
+		Optional<User> result= userService.updateUser(99L, u1);
+		
+		assertThat(result).isNotPresent();
+		verify(userRepository, times(1)).findById(99L);
+		verify(userRepository, never()).save(any(User.class));
+		
+	}
 }
