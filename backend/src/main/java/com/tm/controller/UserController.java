@@ -49,7 +49,7 @@ public class UserController {
 	}
 	
 	// GET user by email
-	@GetMapping("/email/{email}")
+	@GetMapping("/mail/{email}")
 	public ResponseEntity<User> getUserByEmail(@PathVariable String email){
 		return userService.getUserByEmail(email).map(ResponseEntity::ok)
 										.orElse(ResponseEntity.notFound().build());

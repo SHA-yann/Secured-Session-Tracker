@@ -121,7 +121,7 @@ class UserControllerTest {
 		
 		when(userService.getUserByEmail("john@free.fr")).thenReturn(Optional.of(u1));
 		
-		mockMvc.perform(get("/api/users/email/{email}", "john@free.fr"))
+		mockMvc.perform(get("/api/users/mail/{email}", "john@free.fr"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.username").value("john"));
 		
@@ -133,7 +133,7 @@ class UserControllerTest {
 		
 		when(userService.getUserByEmail("ghost@free.fr")).thenReturn(Optional.empty());
 		
-		mockMvc.perform(get("/api/users/email/{email}", "ghost@free.fr"))
+		mockMvc.perform(get("/api/users/mail/{email}", "ghost@free.fr"))
 				.andExpect(status().isNotFound());
 		
 		verify(userService, times(1)).getUserByEmail("ghost@free.fr");
