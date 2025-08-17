@@ -25,7 +25,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Grant exe perms for mvnw
-      run: chmod +x ./mvnw
+      run: chmod +x mvnw
     
     - name: Set up JDK
       uses: actions/setup-java@v4
