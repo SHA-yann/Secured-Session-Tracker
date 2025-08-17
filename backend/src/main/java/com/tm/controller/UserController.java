@@ -1,8 +1,12 @@
 package com.tm.controller;
 
-import org.springframework.http.HttpStatus;
+import java.util.List;
+
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -13,15 +17,39 @@ import com.tm.service.UserService;
 @RequestMapping("/api/users")
 public class UserController {
 
-	private final UserService userS;
+	private final UserService userService;
 	
 	public UserController(UserService userService) {
-		this.userS=userService;
+		this.userService=userService;
 	}
 	
+	// POST a user
 	@PostMapping
-	public ResponseEntity<User> createUser(User user){
-		User created=userS.createUser(user);
-		return new ResponseEntity<>(created, HttpStatus.CREATED);
+	public ResponseEntity<User> createUser(@RequestBody User user){
+		User created=userService.createUser(user);
+		return ResponseEntity.status(201).body(created);
+	}
+	
+	// GET all users
+	@GetMapping
+	public ResponseEntity<List<User>> getAllUsers(){
+		List<User> users = userService.getAllUsers();
+		return  ResponseEntity.ok(users);
+	}
+	
+	// GET user by id
+	@GetMapping("/{id}")
+	public ResponseEntity<User> getUserById(@PathVariable Long id){
+		
+		return userService.getUserById(id)
+				.map(ResponseEntity::ok)
+				.orElse(ResponseEntity.notFound().build());
+	}
+	
+	// GET user by email
+	@GetMapping("/email/{email}")
+	public ResponseEntity<User> getUserByEmail(@PathVariable String email){
+		return userService.getUserByEmail(email).map(ResponseEntity::ok)
+										.orElse(ResponseEntity.notFound().build());
 	}
 }

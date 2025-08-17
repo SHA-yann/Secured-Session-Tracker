@@ -51,4 +51,12 @@ public class User {
 		updatedAt=Instant.now();
 	}
 
+	public User(@NotBlank String username, @Email String email, @NotBlank String password, String role) {
+		super();
+		this.username = username;
+		this.email = email;
+		this.password = password;
+		this.role = role;
+	}
+
 }

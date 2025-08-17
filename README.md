@@ -1,10 +1,10 @@
-# task manager Project
+# portfolio App
 
 A full-stack portfolio project using:
 **Backend:** Java 17, Spring Boot
 **Frontend:** Angular 19 (standalone components)
 **Database:** PostgreSQL
-**Methodology:** Test-Driven Development (TDD)
+**Methodology:** Test-Driven Development (TDD) for one feature
 **Version Control:** Git (feature-branch workflow)
 
 ## Project Purpose
@@ -58,7 +58,13 @@ PostgreSQL 15+
  cd../frontend
  npm install
 
-## Feature register-user (TDD)
+## Feature register-user:POST (TDD)
 - UserServiceTest tests the creation of a user
 - UserRepositoryTest tests the persistence of a user in the db
 - UserControllerTest tests registration of a user via the REST API 
+- implementing User, UserController, UserService, UserRepository
+
+## Feature search-user:GET (Agile syle)
+- getting Allusers(when empty list), finding a user by Id(when not found), or by mail(when not found)
+- implementing all GET methods from controller to repository layer(if needed) with tests
+
