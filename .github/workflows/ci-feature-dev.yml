@@ -23,6 +23,9 @@ jobs:
     steps:
     - name: checkout code
       uses: actions/checkout@v4
+
+    - name: Grant exe perms for mvnw
+      run: chmod +x ./mvnw
     
     - name: Set up JDK
       uses: actions/setup-java@v4
@@ -31,9 +34,6 @@ jobs:
         distribution: 'temurin'
         architecture: x64
         cache: maven
-
-    - name: Grant exe perms for mvnw
-      run: chmod +x mvnw
       
     - name: Run tests
       run: 
