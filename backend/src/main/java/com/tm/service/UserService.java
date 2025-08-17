@@ -47,5 +47,13 @@ public class UserService {
 			
 		});
 	}
+	
+	public Boolean deleteUser(Long id) {
+		if(userRepository.existsById(id)) {
+			userRepository.deleteById(id);
+			return true;
+		}
+		return false;
+	}
 
 }
