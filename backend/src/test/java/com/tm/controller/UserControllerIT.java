@@ -1,0 +1,81 @@
+package com.tm.controller;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tm.model.User;
+import com.tm.repository.UserRepository;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+class UserControllerIT {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @BeforeEach
+    void cleanDatabase() {
+        userRepository.deleteAll();
+    }
+
+    @Test
+    void testFullCrudFlow() throws Exception {
+        // 1. CREATE
+        User user = new User("Yann","yannsteve@ymail.fr","secure_123","ADMIN");
+
+        String userJson = objectMapper.writeValueAsString(user);
+
+        String response = mockMvc.perform(post("/api/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(userJson))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        User created = objectMapper.readValue(response, User.class);
+        assertThat(created.getId()).isNotNull();
+
+        Long userId = created.getId();
+
+        // 2. READ
+        mockMvc.perform(get("/api/users/" + userId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("Yann"))
+                .andExpect(jsonPath("$.email").value("yannsteve@ymail.fr"));
+
+        // 3. UPDATE
+        created.setUsername("john");
+        String updatedJson = objectMapper.writeValueAsString(created);
+
+        mockMvc.perform(put("/api/users/" + userId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updatedJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("john"));
+
+        // 4. DELETE
+        mockMvc.perform(delete("/api/users/" + userId))
+                .andExpect(status().isNoContent());
+
+        // 5. READ after DELETE → Not Found
+        mockMvc.perform(get("/api/users/" + userId))
+                .andExpect(status().isNotFound());
+    }
+}
