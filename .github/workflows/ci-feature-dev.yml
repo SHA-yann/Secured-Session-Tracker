@@ -25,4 +25,4 @@ jobs:
       
     - name: Run Maven tests
       run: 
-        cd backend && mvn -B -U test
+        cd backend && mvn -B -U clean verify
