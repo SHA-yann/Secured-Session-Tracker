@@ -23,9 +23,6 @@ jobs:
     steps:
     - name: checkout code
       uses: actions/checkout@v4
-
-    - name: Grant exe perms for mvnw
-      run: chmod +x mvnw
     
     - name: Set up JDK
       uses: actions/setup-java@v4
@@ -37,4 +34,4 @@ jobs:
       
     - name: Run tests
       run: 
-        cd backend && ./mvnw -B -U clean verify
+        cd backend && mvn -B -U clean verify
