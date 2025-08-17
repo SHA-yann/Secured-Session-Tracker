@@ -69,4 +69,5 @@ PostgreSQL 15+
 - implementing all GET methods from controller to repository layer(if needed) with tests
 
 ## Feature update-user:PUT (Agile)
-- implementation on the service layer ans tests
+- implementing on the service layer and tests
+- implementing on the controller layer and tests

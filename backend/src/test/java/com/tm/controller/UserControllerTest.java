@@ -1,11 +1,13 @@
 package com.tm.controller;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -136,4 +138,31 @@ class UserControllerTest {
 		verify(userService, times(1)).getUserByEmail("ghost@free.fr");
 	}
 	
+	@Test
+	void test_UpdateUser_found() throws Exception{
+		
+		when(userService.updateUser(eq(1L),any(User.class))).thenReturn(Optional.of(u1));
+		
+		mockMvc.perform(put("/api/users/1")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(u)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.username").value("john"))
+				.andExpect(jsonPath("$.role").value("USER"));
+		
+		verify(userService, times(1)).updateUser(eq(1L),any(User.class));
+	}
+	
+	@Test
+	void test_UpdateUser_notFound() throws Exception{
+	
+		when(userService.updateUser(eq(99L),any(User.class))).thenReturn(Optional.empty());
+		
+		mockMvc.perform(put("/api/users/99")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(u1)))
+				.andExpect(status().isNotFound());
+		
+		verify(userService, times(1)).updateUser(eq(99L),any(User.class));
+	}
 }
