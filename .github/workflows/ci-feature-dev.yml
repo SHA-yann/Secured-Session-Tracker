@@ -31,7 +31,6 @@ jobs:
         distribution: 'temurin'
         architecture: x64
         cache: maven
-      
     - name: Run Maven tests
       run: 
-        cd backend && mvn -B -U clean verify
+        cd backend && ./mvnw -B -U clean verify
