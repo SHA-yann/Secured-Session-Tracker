@@ -12,12 +12,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
-@AutoConfigureMockMvc
+//@WithMockUser(username="",roles= {""})
+@AutoConfigureMockMvc(addFilters=false)
 class UserControllerIT {
 
     @Autowired
@@ -50,7 +51,7 @@ class UserControllerIT {
                 .getContentAsString();
 
         User created = objectMapper.readValue(response, User.class);
-        assertThat(created.getId()).isNotNull();
+        assertNotNull(created.getId());
 
         Long userId = created.getId();
 
