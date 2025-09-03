@@ -1,6 +1,7 @@
 package com.tm.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tm.model.Role;
 import com.tm.model.User;
 import com.tm.repository.UserRepository;
 
@@ -38,7 +39,8 @@ class UserControllerIT {
     @Test
     void testFullCrudFlow() throws Exception {
         // 1. CREATE
-        User user = new User("Yann","yannsteve@ymail.fr","secure_123","ADMIN");
+        User user = new User("Yann","yannsteve@ymail.fr","secure_123");
+        user.setRole(Role.ADMIN);
 
         String userJson = objectMapper.writeValueAsString(user);
 

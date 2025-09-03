@@ -33,7 +33,7 @@ public class User {
 	
 	@Column(nullable=false)
 	@Enumerated(EnumType.STRING)
-	private String role;
+	private Role role;
 	
 	@Column(nullable=false, updatable=false)
 	private Instant createdAt;
@@ -54,12 +54,12 @@ public class User {
 		updatedAt=Instant.now();
 	}
 
-	public User(@NotBlank String username, @Email String email, @NotBlank String password, String role) {
+	public User(@NotBlank String username, @Email String email, @NotBlank String password) {
 		super();
 		this.username = username;
 		this.email = email;
 		this.password = password;
-		this.role = role;
 	}
 
 }
+

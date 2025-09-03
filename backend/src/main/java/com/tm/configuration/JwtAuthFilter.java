@@ -1,26 +1,30 @@
-package configuration;
+package com.tm.configuration;
 
 import java.io.IOException;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+
+import com.tm.service.MyUserDetails;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+@Component
 public class JwtAuthFilter extends OncePerRequestFilter {
 
-	private final JwtProvider jwtProvider;
-	private final UserDetailsService userDetailsService;
 	
-	public JwtAuthFilter(JwtProvider jP,UserDetailsService uDS) {
+	private final JwtProvider jwtProvider;
+	private final MyUserDetails myUserDetails;
+	
+	public JwtAuthFilter(JwtProvider jP,MyUserDetails myUserDetails) {
 		this.jwtProvider=jP;
-		this.userDetailsService=uDS;
+		this.myUserDetails=myUserDetails;
 	}
 	
 	@Override
@@ -44,9 +48,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 		}
 		
 		if(username != null && SecurityContextHolder.getContext().getAuthentication()==null) {
-			UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+			UserDetails userDetails = myUserDetails.loadUserByUsername(username);
 			
-			if(!jwtProvider.isTokenExpired(token)) {
+			if(jwtProvider.validToken(token, userDetails)) {
 				UsernamePasswordAuthenticationToken upaToken= new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
 				SecurityContextHolder.getContext().setAuthentication(upaToken);
 			}
