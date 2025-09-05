@@ -1,4 +1,4 @@
-package com.tm.configuration;
+package com.tm.security;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Date;

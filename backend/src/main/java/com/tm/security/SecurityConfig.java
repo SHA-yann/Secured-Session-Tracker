@@ -1,4 +1,4 @@
-package com.tm.configuration;
+package com.tm.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

@@ -1,59 +1,77 @@
 package com.tm.controller;
 
-import java.util.List;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.tm.model.AuthRequest;
-import com.tm.model.AuthResponse;
-import com.tm.model.User;
-import com.tm.service.UserService;
+import com.tm.service.AuthService;
 
-import com.tm.configuration.JwtProvider;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+
 
 @RestController
-@RequestMapping("/login")
+@RequestMapping("/auth")
 public class AuthController {
-
-	private final AuthenticationManager authenticationManager;
-	private final UserService userService;
-	//private final JwtProvider jwtProvider;
 	
+	private final AuthService authService;
 	
-	public AuthController(AuthenticationManager authenticationManager,UserService userService/*,JwtProvider jwtProvider*/) {
+	public AuthController(AuthService authService) {
 		
-		this.authenticationManager=authenticationManager;
-		this.userService= userService;
-		//this.jwtProvider= jwtProvider;
+		this.authService= authService;
 	}
 	
 	// LOGIN
-	@PostMapping
-	public ResponseEntity<?> login(@RequestBody AuthRequest request){
+	@PostMapping("/login")
+	public ResponseEntity<?> login(@RequestBody AuthRequest request) throws BadCredentialsException{
+		
+		Map<String, Cookie> login= new HashMap<String,Cookie>();
 		
 		try {
-			authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
+			login = authService.login(request);
 		}catch(BadCredentialsException e) {
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Credentials");
 		}
+		return ResponseEntity.ok()
+							.header(HttpHeaders.SET_COOKIE,login.values().toString())
+							.body(new AuthResponse(login.keySet().toString(),null));
+	}
+	
+	//REFRESH
+	@PostMapping("/refresh")
+	public ResponseEntity<?> refresh(HttpServletRequest request){
 		
-		UserDetails userDetails= userService.findByName(request.getUsername())
-												.map(u-> new org.springframework.security.core.userdetails.User(u.getUsername(), u.getPassword(), List.of(new SimpleGrantedAuthority(u.getRole().name()))))
-												.orElseThrow();
+		Map<String, Cookie> refresh= authService.refresh(request);;
 		
-		//String token = jwtProvider.generateToken(userDetails);
+		if(refresh.equals(Collections.emptyMap()))
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No cookie to refresh authentication ");
+
+		return ResponseEntity.ok()
+							.header(HttpHeaders.SET_COOKIE,refresh.values().toString())
+							.body(new AuthResponse(refresh.keySet().toString(),null));
 		
-		return ResponseEntity.ok(new AuthResponse());
+	}
+	
+	//LOGOUT
+	@PostMapping("/logout")
+	public ResponseEntity<?> logout(@RequestBody Map<String,String> req){
+		
+		String username=req.get("username");
+		authService.logout(username);
+		
+		return ResponseEntity.noContent()
+							.header(HttpHeaders.SET_COOKIE, "")
+							.build();
+		
 	}
 	
 }

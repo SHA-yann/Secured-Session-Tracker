@@ -1,23 +1,23 @@
 package com.tm.model;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 @Entity
 @NoArgsConstructor
-@Table(name="users")
+@Table(name="users",indexes= {@Index(name="idx_user_email",columnList="email",unique=true)})
 @Getter @Setter 
 public class User {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long Id;
+	private long Id;
 	
 	@NotBlank
 	@Column(nullable=false, length=20)
@@ -41,6 +41,8 @@ public class User {
 	@Column(nullable=false)
 	private Instant updatedAt;
 	
+	@OneToMany(mappedBy="users", cascade=CascadeType.ALL,orphanRemoval=true)
+	private List<RefreshToken> refreshTokens=new ArrayList<>();
 
 	@PrePersist
 	void onCreate() {

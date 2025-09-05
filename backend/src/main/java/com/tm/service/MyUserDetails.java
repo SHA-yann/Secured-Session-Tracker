@@ -10,10 +10,13 @@ import org.springframework.stereotype.Service;
 import com.tm.model.User;
 import com.tm.repository.UserRepository;
 
+import lombok.NoArgsConstructor;
+
 @Service
+@NoArgsConstructor
 public class MyUserDetails implements UserDetailsService{
 
-private final UserRepository userRepository;
+private UserRepository userRepository;
 
 	public MyUserDetails(UserRepository userRepository) {
 		this.userRepository=userRepository;
