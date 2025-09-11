@@ -4,11 +4,13 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 import com.tm.model.RefreshToken;
 import com.tm.model.User;
 import com.tm.repository.RefreshTokenRepository;
 
+@Service
 public class RefreshTokenService {
 
 	public RefreshTokenService(RefreshTokenRepository refp) {

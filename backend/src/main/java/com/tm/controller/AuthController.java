@@ -34,7 +34,7 @@ public class AuthController {
 	@PostMapping("/login")
 	public ResponseEntity<?> login(@RequestBody AuthRequest request) throws BadCredentialsException{
 		
-		Map<String, Cookie> login= new HashMap<String,Cookie>();
+		Map<String, Cookie> login= new HashMap<>();
 		
 		try {
 			login = authService.login(request);

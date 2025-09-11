@@ -5,10 +5,9 @@ import java.io.IOException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-
-import com.tm.service.MyUserDetails;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -20,11 +19,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
 	
 	private final JwtProvider jwtProvider;
-	private final MyUserDetails myUserDetails;
+	private final UserDetailsService uDs;
 	
-	public JwtAuthFilter(JwtProvider jP,MyUserDetails myUserDetails) {
+	public JwtAuthFilter(JwtProvider jP,UserDetailsService uDs) {
 		this.jwtProvider=jP;
-		this.myUserDetails=myUserDetails;
+		this.uDs=uDs;
 	}
 	
 	@Override
@@ -48,7 +47,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 		}
 		
 		if(username != null && SecurityContextHolder.getContext().getAuthentication()==null) {
-			UserDetails userDetails = myUserDetails.loadUserByUsername(username);
+			UserDetails userDetails = uDs.loadUserByUsername(username);
 			
 			if(jwtProvider.validToken(token, userDetails)) {
 				UsernamePasswordAuthenticationToken upaToken= new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());

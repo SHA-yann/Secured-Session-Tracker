@@ -2,7 +2,9 @@ package com.tm.model;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
@@ -41,7 +43,7 @@ public class User {
 	@Column(nullable=false)
 	private Instant updatedAt;
 	
-	@OneToMany(mappedBy="users", cascade=CascadeType.ALL,orphanRemoval=true)
+	@OneToMany(mappedBy="user", cascade=CascadeType.ALL,orphanRemoval=true)
 	private List<RefreshToken> refreshTokens=new ArrayList<>();
 
 	@PrePersist
@@ -64,4 +66,3 @@ public class User {
 	}
 
 }
-
