@@ -3,6 +3,8 @@ package com.tm.service;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -10,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.tm.Exceptions.*;
+import com.tm.controller.UserToAdmin;
 import com.tm.model.Role;
 import com.tm.model.User;
 import com.tm.repository.UserRepository;
@@ -17,9 +20,11 @@ import com.tm.repository.UserRepository;
 @Service
 public class UserService {
 	
-	private final UserRepository userRepository;
-	public UserService(UserRepository userRepository) {
+	private UserRepository userRepository;
+	private UserToAdmin userToAdmin;
+	public UserService(UserRepository userRepository, UserToAdmin userToAdmin) {
 		this.userRepository=userRepository;
+		this.userToAdmin=userToAdmin;
 	}
 
 	@Transactional
@@ -31,12 +36,13 @@ public class UserService {
 		if(userRepository.existsByUsername(u.getUsername()))
 		throw new UserAlreadyExistsException("Username already taken"+u.getUsername());
 		
+		
 		return userRepository.save(u);
 	}
 	
 	@PreAuthorize("hasRole('ADMIN')")
-	public List<User> getAllUsers(){
-		return userRepository.findAll();
+	public Page<User> getAllUsers(Pageable pageable){
+		return userRepository.findAll(pageable);
 	}
 
 	@PreAuthorize("hasRole('ADMIN') or #id==principal.id")
@@ -88,6 +94,20 @@ public class UserService {
 	public Optional<User> findByName(String username) {
 		
 		return userRepository.findByUsername(username);
+	}
+	
+	@PreAuthorize("hasRole('ADMIN')")
+	public Page<User> searchUsers(String username, Role role, Pageable pageable){
+		
+		if(username != null && !username.isBlank()) {
+			return userRepository.findByUsernameContainingIgnoreCase(username, pageable);
+		}
+		
+		if(role!= null) {
+			return userRepository.findByRole(role, pageable);
+		}
+		
+		return userRepository.findAll(pageable);
 	}
 
 	public void wipeAll() {
