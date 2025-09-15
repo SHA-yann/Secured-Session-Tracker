@@ -64,7 +64,10 @@ PostgreSQL 15+
 - UserControllerTest tests registration of a user via the REST API 
 - implementing User, UserController, UserService, UserRepository
 
-## Feature search-user:GET (Agile syle)
+## Feature search-user:GET (Agile)
 - getting Allusers(when empty list), finding a user by Id(when not found), or by mail(when not found)
 - implementing all GET methods from controller to repository layer(if needed) with tests
 
+## Feature update-user:PUT (Agile)
+- implementing on the service layer and tests
+- implementing on the controller layer and tests

@@ -15,13 +15,14 @@ public class UserService {
 	private final UserRepository userRepository;
 	
 	public UserService(UserRepository userRepository) {
-		this.userRepository=userRepository;
+		
+    this.userRepository=userRepository;
 	}
 
 	@Transactional
 	public User createUser(User u) {
-
-		return userRepository.save(u);
+		
+    return userRepository.save(u);
 	}
 	
 	public List<User> getAllUsers(){
@@ -37,6 +38,17 @@ public class UserService {
 	public Optional<User> getUserByEmail(String email) {
 
 		return userRepository.findByEmail(email);
+	}
+
+	public Optional<User> updateUser(long id, User update) {
+		
+		return userRepository.findById(id).map(found->{found.setUsername(update.getUsername());
+				found.setPassword(update.getPassword());
+				found.setEmail(update.getEmail());
+				found.setRole(update.getRole());
+				return userRepository.save(found);
+			
+		});
 	}
 
 }
