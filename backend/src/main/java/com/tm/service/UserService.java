@@ -59,8 +59,8 @@ public class UserService {
 
 	@Transactional
 	//@PreAuthorize("hasRole('ADMIN')or #id==principal.id")
-	public User updateUser(long id, User update) {
-	    return userRepository.findById(id)
+	public Optional<User> updateUser(long id, User update) {
+	    return Optional.of(userRepository.findById(id)
 	        .map(found -> {
 	            found.setUsername(update.getUsername());
 	            found.setEmail(update.getEmail());
@@ -76,7 +76,7 @@ public class UserService {
 
 	            return userRepository.save(found);
 	        })
-	        .orElseThrow(() -> new UserNotFoundException("User with id " + id + " not found"));
+	        .orElseThrow(() -> new UserNotFoundException("User with id " + id + " not found")));
 	}
 
 	

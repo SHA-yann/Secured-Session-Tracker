@@ -50,8 +50,8 @@ class UserControllerIT {
         String userJson = objectMapper.writeValueAsString(user);
 
         String response = mockMvc.perform(post("/users")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(userJson))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(userJson))
                 .andExpect(status().isCreated())
                 .andReturn()
                 .getResponse()
@@ -73,16 +73,15 @@ class UserControllerIT {
         String updatedJson = objectMapper.writeValueAsString(created);
 
         mockMvc.perform(put("/users/" + userId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(updatedJson))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(updatedJson))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value("john"));
 
         // 4. DELETE
         mockMvc.perform(delete("/users/" + userId)
         		.contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isNoContent())
-        		.andExpect(jsonPath("$.status").value(204));
+                .andExpect(status().isNoContent());
 
         // 5. READ after DELETE → Not Found
         mockMvc.perform(get("/users/" + userId)

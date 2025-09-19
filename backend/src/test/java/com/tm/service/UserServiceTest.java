@@ -145,11 +145,11 @@ class UserServiceTest {
 		when(userRepository.findById(2L)).thenReturn(Optional.of(toSave));
 	    when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 	    
-	    User result = userService.updateUser(2L, u1);
+	    Optional<User> result = userService.updateUser(2L, u1);
 
 	    assertThat(result).isNotNull();
-	    assertThat(result.getUsername()).isEqualTo("john");
-	    assertThat(result.getRole()).isEqualTo(Role.USER);
+	    assertThat(result.get().getUsername()).isEqualTo("john");
+	    assertThat(result.get().getRole()).isEqualTo(Role.USER);
 
 	    verify(userRepository, times(1)).findById(2L);
 	    verify(userRepository, times(1)).save(toSave);
@@ -158,7 +158,7 @@ class UserServiceTest {
 	@Test
 	void test_UpdateUser_notFound() {
 		
-		when(userRepository.findById(99L)).thenThrow(new UserNotFoundException(""));
+		when(userRepository.findById(99L)).thenReturn(Optional.empty());
 		
 		assertThrows(UserNotFoundException.class, () -> userService.updateUser(99L, u1));
 				

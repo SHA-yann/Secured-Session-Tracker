@@ -3,6 +3,8 @@ package com.tm.controller;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -33,6 +35,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tm.Exceptions.UserNotFoundException;
 import com.tm.model.Role;
 import com.tm.model.User;
 import com.tm.security.JwtAuthFilter;
@@ -207,7 +210,7 @@ class UserControllerTest {
 	@Test
 	void test_DeleteUser_found() throws Exception{
 		
-		when(userService.deleteUser(2L)).thenReturn(true);
+		doNothing().when(userService).deleteUser(2L);
 		
 		mockMvc.perform(delete("/users/2")
 		.with(user("John").roles("USER")))
@@ -218,7 +221,7 @@ class UserControllerTest {
 	@Test
 	void test_DeleteUser_notFound() throws Exception{
 		
-		when(userService.deleteUser(99L)).thenReturn(false);
+		doThrow(new UserNotFoundException("User not found")).when(userService).deleteUser(99L);
 		
 		mockMvc.perform(delete("/users/99")).andExpect(status().isNotFound());
 		verify(userService, times(1)).deleteUser((99L));
