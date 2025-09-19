@@ -5,19 +5,22 @@ import com.tm.model.Role;
 import com.tm.model.User;
 import com.tm.service.UserService;
 
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
-
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
+@Import(GlobalExceptionHandler.class)
 @AutoConfigureMockMvc(addFilters=false)
 class UserControllerIT {
 
@@ -32,12 +35,15 @@ class UserControllerIT {
 
     @BeforeEach
     void cleanDatabase() {
-        userService.wipeAll();
+        
+    	userService.wipeAll();
+        
     }
 
     @Test
+    @WithMockUser(username="admin", roles= {"ADMIN"})
     void testFullCrudFlow() throws Exception {
-        // 1. CREATE
+    	// 1. CREATE
         User user = new User("Yann","yannsteve@ymail.fr","secure_123");
         user.setRole(Role.ADMIN);
 
@@ -51,7 +57,7 @@ class UserControllerIT {
                 .getResponse()
                 .getContentAsString();
 
-        User created = objectMapper.readValue(response, User.class);
+        UserToAdmin created = objectMapper.readValue(response, UserToAdmin.class);
         assertNotNull(created.getId());
 
         Long userId = created.getId();
@@ -73,11 +79,16 @@ class UserControllerIT {
                 .andExpect(jsonPath("$.username").value("john"));
 
         // 4. DELETE
-        mockMvc.perform(delete("/users/" + userId))
-                .andExpect(status().isNoContent());
+        mockMvc.perform(delete("/users/" + userId)
+        		.contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNoContent())
+        		.andExpect(jsonPath("$.status").value(204));
 
         // 5. READ after DELETE → Not Found
-        mockMvc.perform(get("/users/" + userId))
-                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/users/" + userId)
+        		.contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404));
+                
     }
 }

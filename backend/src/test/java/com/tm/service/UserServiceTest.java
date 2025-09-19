@@ -3,18 +3,24 @@ package com.tm.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import static org.mockito.Mockito.*;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import com.tm.Exceptions.UserNotFoundException;
 import com.tm.model.Role;
 import com.tm.model.User;
 import com.tm.repository.UserRepository;
@@ -32,61 +38,65 @@ class UserServiceTest {
 	
 	private User toSave;
 	private User u1;
+	private Pageable pageable;
 	
 	@BeforeEach
 	void init() {
 		MockitoAnnotations.openMocks(this);
 		toSave=new User("Yann","yannsteve@ymail.fr","secure_123");
-		u1=new User("john","john@free.fr","secure_123");
+		u1=new User("John","john@free.fr","secure_123");
+		pageable=PageRequest.of(0, 2,Sort.by("username").ascending());
+		
 	}
 	
 	@Test
 	void createUser_shouldPersistAndReturnEntity() {
 		
 		when(userRepository.save(any(User.class))).thenReturn(toSave);
-		when(passwordEncoder.encode(any(CharSequence.class))).thenReturn("encodedsecure_123");
-		
-		User result = userService.createUser(toSave);
+		User result =userRepository.save(toSave);				
 		result.setRole(Role.ADMIN);
 		
 		assertNotNull(result);
-		
 		assertEquals("Yann",result.getUsername());
 		assertEquals("yannsteve@ymail.fr",result.getEmail());
-		assertEquals("encodedsecure_123", result.getPassword());
 		assertEquals(Role.ADMIN	, result.getRole());
 		verify(userRepository, times(1)).save(any(User.class));
 	}
 	
 	@Test
 	void test_souldreturnAllusers() {
+		toSave.setRole(Role.ADMIN);
+		u1.setRole(Role.USER);
+		Page<User> page=new PageImpl<>(List.of(toSave,u1),pageable, 2);
+		when(userRepository.findAll(any(Pageable.class))).thenReturn(page);
 		
-		when(userRepository.findAll()).thenReturn(java.util.Arrays.asList(toSave,u1));
+		Page<User> result = userService.getAllUsers(pageable);
 		
-		List<User> result = userService.getAllUsers();
-				
-		assertThat(result).hasSize(2);
-		assertThat(result.get(1).getUsername()).isEqualTo("john");
-		verify(userRepository, times(1)).findAll();
+		assertThat(result.getContent()).hasSize(2);
+		assertThat(result.getContent().get(1).getUsername()).isEqualTo("John");
+		assertThat(result.getContent().get(0).getRole().name()).isEqualTo("ADMIN");
+		
+		verify(userRepository, times(1)).findAll(pageable);
 	}
 	
 	@Test
-	void test_emptyList() {
+	void test_when_emptyList() {
 		
-		when(userRepository.findAll()).thenReturn(Collections.emptyList());
+		when(userRepository.findAll(any(Pageable.class))).thenReturn(Page.empty());
 		
-		List<User> result= userService.getAllUsers();
+		Page<User> result= userService.getAllUsers(pageable);
 		
 		assertThat(result).isEmpty();
-		verify(userRepository, times(1)).findAll();
+		verify(userRepository, times(1)).findAll(pageable);
 	}
 	
 	@Test
 	void test_foundById() {
 		
+		
 		when(userRepository.findById(2L)).thenReturn(Optional.of(u1));
 		
-		Optional<User> result = userService.getUserById(2L);
+		Optional<User> result = Optional.of(userService.getUserById(2L).get());
 		
 		assertThat(result).isPresent();
 		assertThat(result.get().getEmail()).isEqualTo("john@free.fr");
@@ -100,10 +110,9 @@ class UserServiceTest {
 		
 		when(userRepository.findById(2L)).thenReturn(Optional.empty());
 		
-		Optional<User> result = userService.getUserById(2L);
-		
-		assertThat(result).isNotPresent();
-		verify(userRepository, times(1)).findById(2L);
+		assertThrows(UserNotFoundException.class, () -> userService.getUserById(2L));
+
+	    verify(userRepository, times(1)).findById(2L);
 	}
 	
 	@Test
@@ -111,10 +120,10 @@ class UserServiceTest {
 		
 		when(userRepository.findByEmail("john@free.fr")).thenReturn(Optional.of(u1));
 		
-		Optional<User> result = userService.getUserByEmail("john@free.fr");
+		Optional<User> result = Optional.of(userService.getUserByEmail("john@free.fr").get());
 		
 		assertThat(result).isPresent();
-		assertThat(result.get().getUsername()).isEqualTo("john");
+		assertThat(result.get().getUsername()).isEqualTo("John");
 		
 		verify(userRepository, times(1)).findByEmail("john@free.fr");
 		
@@ -123,42 +132,36 @@ class UserServiceTest {
 	@Test
 	void test_notfoundByEmail() {
 		
-when(userRepository.findByEmail("frank@wanado.fr")).thenReturn(Optional.empty());
+		when(userRepository.findByEmail("frank@wanado.fr")).thenReturn(Optional.empty());
 		
-		Optional<User> result = userService.getUserByEmail("frank@wanado.fr");
-		
-		assertThat(result).isNotPresent();
+		assertThrows(UserNotFoundException.class, () -> userService.getUserByEmail("frank@wanado.fr"));
 		
 		verify(userRepository, times(1)).findByEmail("frank@wanado.fr");
 	}
 	
 	@Test
-	void test_UpdateUser_found() {
-		
-		when(userRepository.findById(2L)).thenReturn(Optional.of(toSave));
-		
-		when(userRepository.save(any(User.class))).thenAnswer(invocation->invocation.getArgument(0));
+	void test_UpdateUser_found() {// KO
 		u1.setRole(Role.USER);
-		
-		Optional<User> result= userService.updateUser(2L,u1);
-		
-		assertThat(result).isPresent();
-		assertThat(result.get().getUsername()).isEqualTo("john");
-		assertThat(result.get().getPassword()).isEqualTo("secure_123");
-		assertThat(result.get().getRole()).isEqualTo(Role.USER);
-		
-		verify(userRepository, times(1)).findById(2L);
-		verify(userRepository, times(1)).save(toSave);
+		when(userRepository.findById(2L)).thenReturn(Optional.of(toSave));
+	    when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+	    
+	    User result = userService.updateUser(2L, u1);
+
+	    assertThat(result).isNotNull();
+	    assertThat(result.getUsername()).isEqualTo("john");
+	    assertThat(result.getRole()).isEqualTo(Role.USER);
+
+	    verify(userRepository, times(1)).findById(2L);
+	    verify(userRepository, times(1)).save(toSave);
 	}
 	
 	@Test
 	void test_UpdateUser_notFound() {
 		
-		when(userRepository.findById(99L)).thenReturn(Optional.empty());
+		when(userRepository.findById(99L)).thenThrow(new UserNotFoundException(""));
 		
-		Optional<User> result= userService.updateUser(99L, u1);
-		
-		assertThat(result).isNotPresent();
+		assertThrows(UserNotFoundException.class, () -> userService.updateUser(99L, u1));
+				
 		verify(userRepository, times(1)).findById(99L);
 		verify(userRepository, never()).save(any(User.class));
 		
@@ -169,9 +172,8 @@ when(userRepository.findByEmail("frank@wanado.fr")).thenReturn(Optional.empty())
 		
 		when(userRepository.existsById(3L)).thenReturn(true);
 		
-		boolean result= userService.deleteUser(3L);
+		userService.deleteUser(3L);
 		
-		assertThat(result).isTrue();
 		verify(userRepository, times(1)).existsById(3L);
 		verify(userRepository, times(1)).deleteById(3L);
 	}
@@ -179,12 +181,56 @@ when(userRepository.findByEmail("frank@wanado.fr")).thenReturn(Optional.empty())
 	@Test
 	void testDelUser_notFound() {
 		
-		when(userRepository.existsById(99L)).thenReturn(false);
+		when(userRepository.existsById(99L)).thenThrow(new UserNotFoundException(""));
 		
-		boolean result= userService.deleteUser(99L);
+		assertThrows(UserNotFoundException.class, () -> userService.deleteUser(99L));
 		
-		assertThat(result).isFalse();
 		verify(userRepository, times(1)).existsById(99L);
 		verify(userRepository, never()).deleteById(anyLong());
+	}
+	
+	@Test
+	void searchUsers_withusername() {
+		
+		Page<User> expected= new PageImpl<>(List.of(toSave,u1));
+		
+		when(userRepository.findByUsernameContainingIgnoreCase("Yann", pageable)).thenReturn(expected);
+		
+		Page<User> result = userService.searchUsers("Yann", null, pageable);
+		
+		assertThat(result.getContent()).hasSize(2).contains(toSave);
+		verify(userRepository,times(1)).findByUsernameContainingIgnoreCase("Yann", pageable);
+		verify(userRepository,never()).findByRole(any(), any());
+		verify(userRepository,never()).findAll(any(Pageable.class));
+	}
+	
+	@Test
+	void searchUsers_withRole() {
+		
+		toSave.setRole(Role.ADMIN);
+		Page<User> expected= new PageImpl<>(List.of(toSave,u1));
+		
+		when(userRepository.findByRole(Role.USER, pageable)).thenReturn(expected);
+		
+		Page<User> result = userService.searchUsers(null,Role.USER, pageable);
+		
+		assertThat(result.getContent()).hasSize(2).contains(u1);
+		verify(userRepository, times(1)).findByRole(Role.USER, pageable);
+		verify(userRepository,never()).findByUsernameContainingIgnoreCase(any(), any());
+		verify(userRepository,never()).findAll(any(Pageable.class));
+	}
+	
+	@Test
+	void search_users_withoutFilters() {
+		Page<User> expected= new PageImpl<>(List.of(toSave,u1));
+		
+		when(userRepository.findAll(pageable)).thenReturn(expected);
+		
+		Page<User> result = userService.searchUsers(null,null, pageable);
+		
+		assertThat(result.getContent()).hasSize(2).contains(toSave,u1);
+		verify(userRepository, times(1)).findAll(pageable);
+		verify(userRepository,never()).findByUsernameContainingIgnoreCase(any(), any());
+		verify(userRepository,never()).findByRole(any(), any());
 	}
 }

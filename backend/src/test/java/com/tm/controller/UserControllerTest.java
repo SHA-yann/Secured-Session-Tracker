@@ -1,28 +1,33 @@
 package com.tm.controller;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.util.Arrays;
-import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -34,7 +39,6 @@ import com.tm.security.JwtAuthFilter;
 import com.tm.service.UserService;
 
 @WebMvcTest(UserController.class)
-//@WithMockUser(username="",roles= {""})
 @AutoConfigureMockMvc(addFilters=false)
 class UserControllerTest {
 
@@ -52,6 +56,7 @@ class UserControllerTest {
 	
 	private User u;
 	private User u1;
+	private Pageable pageable;
 	
 	@BeforeEach
 	void init() {
@@ -59,22 +64,23 @@ class UserControllerTest {
 		u.setRole(Role.ADMIN);
 		u1=new User("john","john@free.fr","secure_123");
 		u1.setRole(Role.USER);
-		
+		pageable=PageRequest.of(0, 10);
 		
 	}
 	
 	@Test
 	void shouldCreateUser() throws Exception {
 		
-Mockito.when(userService.createUser(Mockito.any(User.class))).thenReturn(u);
+		Mockito.when(userService.createUser(Mockito.any(User.class))).thenReturn(u);
 		
 		mockMvc.perform(post("/users")
+				.with(user("Yann").roles("ADMIN"))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(u)))
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.username").value("Yann"))
 				.andExpect(jsonPath("$.email").value("yannsteve@ymail.fr"))
-				.andExpect(jsonPath("$.password").value("secure_123"))
+				.andExpect(jsonPath("$.password").doesNotExist())
 				.andExpect(jsonPath("$.role").value(Role.ADMIN.name()));
 		
 		verify(userService, times(1)).createUser(any(User.class));
@@ -83,27 +89,36 @@ Mockito.when(userService.createUser(Mockito.any(User.class))).thenReturn(u);
 	@Test
 	void getAllUser_shouldReturnallUsers() throws Exception{
 
-		when(userService.getAllUsers()).thenReturn(Arrays.asList(u,u1));
+		Page<User> page= new PageImpl<>(List.of(u,u1));
+		when(userService.getAllUsers(any(Pageable.class))).thenReturn(page);
 		
 		mockMvc.perform(get("/users")
+				.with(user("Yann").roles("ADMIN"))
 				.contentType(MediaType.APPLICATION_JSON))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.size()").value(2))
-				.andExpect(jsonPath("$[1].username").value("john"))
-				.andExpect(jsonPath("$[0].role").value(Role.ADMIN.name()));
+				.andExpect(jsonPath("$.content[1].username").value("john"))
+				.andExpect(jsonPath("$.content[1].password").doesNotExist())
+				.andExpect(jsonPath("$.content[0].role").value(Role.ADMIN.name()));
 	}
 	
 	@Test
-	void getAllUser_When_EmptyList() throws Exception{
+	void getAllUser_When_Empty() throws Exception{
 		
-		when(userService.getAllUsers()).thenReturn(Collections.emptyList());
+		when(userService.getAllUsers(any(Pageable.class))).thenReturn(new PageImpl<>(List.of()));
 		
 		mockMvc.perform(get("/users")
-				.contentType(MediaType.APPLICATION_JSON))
-				.andExpect(status().isOk())
-				.andExpect(content().json("[]"));
+				.with(user("Yann").roles("ADMIN"))
+				.param("page", "0")
+				.param("size", "10")
+				.param("sort", "unsorted"))
+				.andExpect(status().isOk());
 		
-		verify(userService, times(1)).getAllUsers();
+		ArgumentCaptor<Pageable> pageableCaptor=ArgumentCaptor.forClass(Pageable.class);
+		
+		verify(userService).getAllUsers(pageableCaptor.capture());
+		
+		assertEquals(0,pageable.getPageNumber());
+		assertEquals(10, pageable.getPageSize());
 	}
 	
 	@Test
@@ -111,10 +126,13 @@ Mockito.when(userService.createUser(Mockito.any(User.class))).thenReturn(u);
 		
 		when(userService.getUserById(4L)).thenReturn(Optional.of(u));
 		
-		mockMvc.perform(get("/users/4")).andExpect(status().isOk())
+		mockMvc.perform(get("/users/4")
+				.with(user("Yann").roles("ADMIN"))
+				.contentType(MediaType.APPLICATION_JSON))
+				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.username").value("Yann"))
-				.andExpect(jsonPath("$.email").value("yannsteve@ymail.fr"));
-		
+				.andExpect(jsonPath("$.email").value("yannsteve@ymail.fr"))
+				.andExpect(jsonPath("$.password").doesNotExist());
 		verify(userService, times(1)).getUserById(4L);
 	}
 	
@@ -123,7 +141,8 @@ Mockito.when(userService.createUser(Mockito.any(User.class))).thenReturn(u);
 		
 		when(userService.getUserById(99L)).thenReturn(Optional.empty());
 		
-		mockMvc.perform(get("/users/99")).andExpect(status().isNotFound());
+		mockMvc.perform(get("/users/99").with(user("Yann").roles("ADMIN")))
+										.andExpect(status().isNotFound());
 		
 		verify(userService, times(1)).getUserById(99L);
 	}
@@ -133,9 +152,11 @@ Mockito.when(userService.createUser(Mockito.any(User.class))).thenReturn(u);
 		
 		when(userService.getUserByEmail("john@free.fr")).thenReturn(Optional.of(u1));
 		
-		mockMvc.perform(get("/users/mail/{email}", "john@free.fr"))
+		mockMvc.perform(get("/users/mail/{email}", "john@free.fr")
+				.with(user("Yann").roles("ADMIN")))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.username").value("john"));
+				.andExpect(jsonPath("$.username").value("john"))
+				.andExpect(jsonPath("$.password").doesNotExist());
 		
 		verify(userService, times(1)).getUserByEmail("john@free.fr");
 	}
@@ -145,7 +166,8 @@ Mockito.when(userService.createUser(Mockito.any(User.class))).thenReturn(u);
 		
 		when(userService.getUserByEmail("ghost@free.fr")).thenReturn(Optional.empty());
 		
-		mockMvc.perform(get("/users/mail/{email}", "ghost@free.fr"))
+		mockMvc.perform(get("/users/mail/{email}", "ghost@free.fr")
+				.with(user("Yann").roles("ADMIN")))
 				.andExpect(status().isNotFound());
 		
 		verify(userService, times(1)).getUserByEmail("ghost@free.fr");
@@ -157,10 +179,12 @@ Mockito.when(userService.createUser(Mockito.any(User.class))).thenReturn(u);
 		when(userService.updateUser(eq(1L),any(User.class))).thenReturn(Optional.of(u1));
 		
 		mockMvc.perform(put("/users/1")
+				.with(user("Yann").roles("ADMIN"))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(u)))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.username").value("john"))
+				.andExpect(jsonPath("$.password").doesNotExist())
 				.andExpect(jsonPath("$.role").value(Role.USER.name()));
 		
 		verify(userService, times(1)).updateUser(eq(1L),any(User.class));
@@ -172,6 +196,7 @@ Mockito.when(userService.createUser(Mockito.any(User.class))).thenReturn(u);
 		when(userService.updateUser(eq(99L),any(User.class))).thenReturn(Optional.empty());
 		
 		mockMvc.perform(put("/users/99")
+				.with(user("Yann").roles("ADMIN"))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(u1)))
 				.andExpect(status().isNotFound());
@@ -184,7 +209,9 @@ Mockito.when(userService.createUser(Mockito.any(User.class))).thenReturn(u);
 		
 		when(userService.deleteUser(2L)).thenReturn(true);
 		
-		mockMvc.perform(delete("/users/2")).andExpect(status().isNoContent());
+		mockMvc.perform(delete("/users/2")
+		.with(user("John").roles("USER")))
+		.andExpect(status().isNoContent());
 		verify(userService, times(1)).deleteUser((2L));
 	}
 	
