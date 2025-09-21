@@ -26,7 +26,6 @@ class UserRepositoryTest {
 	
 	@BeforeEach
 	void setup() {
-		
 		u2=new User("Yann","yannsteve@ymail.fr","secure_123");
 		u1=new User("john","john@free.fr","secure_123");
 	}
@@ -86,4 +85,5 @@ class UserRepositoryTest {
 		
 		assertThat(found).isNotPresent();
 	}
+
 }

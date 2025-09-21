@@ -61,6 +61,7 @@ public class UserController {
 	// GET user by id
 	@GetMapping("/users/{id}")
 	@PreAuthorize("hasRole('ADMIN') or #id==principal.id")
+
 	public ResponseEntity<User> getUserById(@PathVariable Long id){
 		
 		return userService.getUserById(id)
@@ -71,6 +72,7 @@ public class UserController {
 	// GET user by email
 	@GetMapping("/users/mail/{email}")
 	@PreAuthorize("hasRole('ADMIN') or #id==principal.id")
+
 	public ResponseEntity<User> getUserByEmail(@PathVariable String email){
 		return userService.getUserByEmail(email).map(ResponseEntity::ok)
 										.orElse(ResponseEntity.notFound().build());

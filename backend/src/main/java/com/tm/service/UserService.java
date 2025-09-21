@@ -75,7 +75,7 @@ public class UserService {
 	
 	@Transactional
 	@PreAuthorize("hasRole('ADMIN')")
-	public boolean deleteUser(Long id) {
+	public boolean deleteUser(long id) {
 		if(!userRepository.existsById(id)) {
 			throw new UserNotFoundException("User with id "+id+" not found");
 			

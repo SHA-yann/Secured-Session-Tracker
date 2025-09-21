@@ -38,6 +38,7 @@ class UserServiceTest {
 		MockitoAnnotations.openMocks(this);
 		toSave=new User("Yann","yannsteve@ymail.fr","secure_123");
 		u1=new User("john","john@free.fr","secure_123");
+
 	}
 	
 	@Test
@@ -50,11 +51,11 @@ class UserServiceTest {
 		result.setRole(Role.ADMIN);
 		
 		assertNotNull(result);
-		
 		assertEquals("Yann",result.getUsername());
 		assertEquals("yannsteve@ymail.fr",result.getEmail());
 		assertEquals("encodedsecure_123", result.getPassword());
 		assertEquals(Role.ADMIN	, result.getRole());
+
 		verify(userRepository, times(1)).save(any(User.class));
 	}
 	
@@ -187,4 +188,5 @@ when(userRepository.findByEmail("frank@wanado.fr")).thenReturn(Optional.empty())
 		verify(userRepository, times(1)).existsById(99L);
 		verify(userRepository, never()).deleteById(anyLong());
 	}
+
 }

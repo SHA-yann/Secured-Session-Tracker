@@ -20,7 +20,7 @@ public class User {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private long Id;
-	
+
 	@NotBlank
 	@Column(nullable=false, length=20)
 	private String username;
@@ -63,6 +63,7 @@ public class User {
 		this.username = username;
 		this.email = email;
 		this.password = password;
+
 	}
 
 }

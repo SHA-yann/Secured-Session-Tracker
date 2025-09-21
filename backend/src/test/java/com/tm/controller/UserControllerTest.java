@@ -34,7 +34,6 @@ import com.tm.security.JwtAuthFilter;
 import com.tm.service.UserService;
 
 @WebMvcTest(UserController.class)
-//@WithMockUser(username="",roles= {""})
 @AutoConfigureMockMvc(addFilters=false)
 class UserControllerTest {
 
@@ -60,13 +59,12 @@ class UserControllerTest {
 		u1=new User("john","john@free.fr","secure_123");
 		u1.setRole(Role.USER);
 		
-		
 	}
 	
 	@Test
 	void shouldCreateUser() throws Exception {
 		
-Mockito.when(userService.createUser(Mockito.any(User.class))).thenReturn(u);
+    Mockito.when(userService.createUser(Mockito.any(User.class))).thenReturn(u);
 		
 		mockMvc.perform(post("/users")
 				.contentType(MediaType.APPLICATION_JSON)
@@ -91,6 +89,7 @@ Mockito.when(userService.createUser(Mockito.any(User.class))).thenReturn(u);
 				.andExpect(jsonPath("$.size()").value(2))
 				.andExpect(jsonPath("$[1].username").value("john"))
 				.andExpect(jsonPath("$[0].role").value(Role.ADMIN.name()));
+
 	}
 	
 	@Test
@@ -162,7 +161,7 @@ Mockito.when(userService.createUser(Mockito.any(User.class))).thenReturn(u);
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.username").value("john"))
 				.andExpect(jsonPath("$.role").value(Role.USER.name()));
-		
+
 		verify(userService, times(1)).updateUser(eq(1L),any(User.class));
 	}
 	
@@ -196,4 +195,5 @@ Mockito.when(userService.createUser(Mockito.any(User.class))).thenReturn(u);
 		mockMvc.perform(delete("/users/99")).andExpect(status().isNotFound());
 		verify(userService, times(1)).deleteUser((99L));
 	}
+
 }

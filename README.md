@@ -4,11 +4,11 @@ A full-stack portfolio project using:
 **Backend:** Java 17, Spring Boot
 **Frontend:** Angular 19 (standalone components)
 **Database:** PostgreSQL
-**Methodology:** Test-Driven Development, Agile
-**Version Control:** Git (feature-branch workflow)
 
 ## Project Purpose
 Demonstrate the ability to design, develop, test, and document a complete application for job postings and applications.
+**Methodology:** Test-Driven Development (TDD) for one feature
+**Version Control:** Git (feature-branch workflow)
 
 ## Technologies
 Java 17
@@ -20,7 +20,7 @@ Jasmine/Karma
 
 ## Development Workflow
 Create feature branch
-Writing one feature in TDD
+Writing one feature with TDD
 Commit frequently with meaningful messages
 Push branch and create Pull Request (PR)
 Merge into `dev` after review
@@ -84,3 +84,4 @@ Integration Test UserControllerIT to validate all the feautures through the API
 - configuring security: registering filter to spring security
 - adding DTOs for authentication
 - adding controller for authentication
+

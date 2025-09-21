@@ -19,6 +19,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc(addFilters=false)
+
 class UserControllerIT {
 
     @Autowired
@@ -33,6 +34,7 @@ class UserControllerIT {
     @BeforeEach
     void cleanDatabase() {
         userService.wipeAll();
+
     }
 
     @Test
