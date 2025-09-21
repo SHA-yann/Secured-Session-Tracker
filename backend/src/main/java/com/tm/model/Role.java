@@ -1,6 +1,12 @@
 package com.tm.model;
 
+/**
+ * Enumeration representing the roles a user can have in the system.
+ */
 public enum Role {
-	ADMIN,
-	USER
+    /** Administrator role with elevated privileges */
+    ADMIN,
+
+    /** Standard user role with limited privileges */
+    USER
 }

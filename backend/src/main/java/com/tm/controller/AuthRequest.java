@@ -6,13 +6,20 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * DTO representing an authentication request.
+ * Contains the credentials required for login.
+ */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Getter @Setter
+@Getter
+@Setter
 public class AuthRequest {
 
-	private String username;
-	private String password;
-	
+    /** Username of the user attempting to authenticate */
+    private String username;
+
+    /** Password of the user attempting to authenticate */
+    private String password;
 }

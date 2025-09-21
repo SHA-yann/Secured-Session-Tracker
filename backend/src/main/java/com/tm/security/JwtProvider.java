@@ -21,67 +21,124 @@ import io.jsonwebtoken.security.Keys;
 import lombok.Getter;
 import lombok.Setter;
 
-
-@Getter @Setter
+/**
+ * Utility class for JWT generation, parsing, and validation.
+ * Handles creation of JWTs with roles, expiration, and signature verification.
+ */
+@Getter
+@Setter
 @Component
 public class JwtProvider {
+
     private final SecretKey key;
     private final Long expiration;
 
-    public JwtProvider(@Value("${jwt.secret}")String secret,@Value("${jwt.expiration}") long expiration) {
+    /**
+     * Constructor initializing the secret key and token expiration time.
+     *
+     * @param secret JWT signing secret
+     * @param expiration token expiration in milliseconds
+     */
+    public JwtProvider(@Value("${jwt.secret}") String secret,
+                       @Value("${jwt.expiration}") long expiration) {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expiration = expiration;
     }
-	
-	private String createToken(Map<String,Object>claims, String subject) {
-		
-		return Jwts.builder().setClaims(claims)
-							.setSubject(subject)
-							.setIssuedAt(new Date(System.currentTimeMillis()))
-							.setExpiration(new Date(System.currentTimeMillis()+expiration))
-							.signWith(key,SignatureAlgorithm.HS256)
-							.compact();
-	}
-	
-	public String generateToken(UserDetails userDetails) {
-		Map<String, Object> claims=new HashMap<>();
-		claims.put("roles", userDetails.getAuthorities().stream()
-										.map(auth->auth.getAuthority())
-										.toList());
-		return createToken(claims,userDetails.getUsername());
-	}
-	
-	public String extractUsername(String token) {
-		
-		return extractAllClaims(token).getSubject();
-	}
-	
-	public List<Role> extractRole(String token) {
-		
-		return extractAllClaims(token).get("Roles", List.class);
-	}
-	
-	public Date  extractExpiration(String token) {
-		
-		return  extractAllClaims(token).getExpiration();
-	}
-	
-	public Boolean isTokenExpired(String token) {
-		
-		return extractExpiration(token).before(new Date());
-		
-	}
-	
-	public Boolean validToken(String token, UserDetails userDetails) {
-		
-		return extractUsername(token).equals(userDetails.getUsername())&& !isTokenExpired(token);
-	}
-	
-	private Claims extractAllClaims(String token) {
-		
-		return Jwts.parserBuilder().setSigningKey(key)
-									.build()
-									.parseClaimsJws(token)
-									.getBody();
-	}
+
+    /**
+     * Creates a JWT token with given claims and subject.
+     *
+     * @param claims additional claims to include
+     * @param subject token subject (usually username)
+     * @return compact JWT string
+     */
+    private String createToken(Map<String, Object> claims, String subject) {
+        return Jwts.builder()
+                .setClaims(claims)
+                .setSubject(subject)
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + expiration))
+                .signWith(key, SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    /**
+     * Generates a JWT token for a given user.
+     * Includes user roles as claims.
+     *
+     * @param userDetails authenticated user details
+     * @return JWT token string
+     */
+    public String generateToken(UserDetails userDetails) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("roles", userDetails.getAuthorities().stream()
+                .map(auth -> auth.getAuthority())
+                .toList());
+        return createToken(claims, userDetails.getUsername());
+    }
+
+    /**
+     * Extracts username (subject) from JWT token.
+     *
+     * @param token JWT string
+     * @return username
+     */
+    public String extractUsername(String token) {
+        return extractAllClaims(token).getSubject();
+    }
+
+    /**
+     * Extracts roles from JWT token.
+     *
+     * @param token JWT string
+     * @return list of roles
+     */
+    public List<Role> extractRole(String token) {
+        return extractAllClaims(token).get("Roles", List.class);
+    }
+
+    /**
+     * Extracts expiration date from JWT token.
+     *
+     * @param token JWT string
+     * @return expiration date
+     */
+    public Date extractExpiration(String token) {
+        return extractAllClaims(token).getExpiration();
+    }
+
+    /**
+     * Checks if a JWT token is expired.
+     *
+     * @param token JWT string
+     * @return true if expired, false otherwise
+     */
+    public Boolean isTokenExpired(String token) {
+        return extractExpiration(token).before(new Date());
+    }
+
+    /**
+     * Validates a JWT token against user details.
+     *
+     * @param token JWT string
+     * @param userDetails authenticated user
+     * @return true if token is valid, false otherwise
+     */
+    public Boolean validToken(String token, UserDetails userDetails) {
+        return extractUsername(token).equals(userDetails.getUsername()) && !isTokenExpired(token);
+    }
+
+    /**
+     * Parses and extracts all claims from a JWT token.
+     *
+     * @param token JWT string
+     * @return Claims object
+     */
+    private Claims extractAllClaims(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+    }
 }

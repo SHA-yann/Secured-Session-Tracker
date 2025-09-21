@@ -13,44 +13,66 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-
+/**
+ * Data Transfer Object (DTO) for transferring User data to admin views.
+ * Includes mapping methods to convert to/from User entity.
+ */
 @NoArgsConstructor
 @AllArgsConstructor
-@Getter @Setter
+@Getter
+@Setter
 @Component
 public class UserToAdmin {
-	
-	private Long Id;
-	
-	@NotBlank
-	private String username;
-	
-	@NotBlank
-	private Role role;
-	
-	@NotBlank
-	private String email;
-	private Instant createdAt;
-	private Instant updatedAt;
-	
-	public static UserToAdmin fromEntity(User user) {
 
-		return new UserToAdmin(user.getId(),
-		user.getUsername(),
-		user.getRole(),
-		user.getEmail(),
-		user.getCreatedAt(),
-		user.getUpdatedAt());
-	}
-	
-	public User toEntity() {
-		
-		User user= new User();
-		user.setId(this.Id);
-		user.setUsername(this.username);
-		user.setEmail(this.email);
-		user.setRole(this.role);
-		
-		return user;
-	}
+    /** User ID */
+    private Long Id;
+
+    /** Username, required */
+    @NotBlank
+    private String username;
+
+    /** User role, required */
+    @NotBlank
+    private Role role;
+
+    /** Email, required */
+    @NotBlank
+    private String email;
+
+    /** Creation timestamp */
+    private Instant createdAt;
+
+    /** Last update timestamp */
+    private Instant updatedAt;
+
+    /**
+     * Converts a User entity to a UserToAdmin DTO.
+     *
+     * @param user the User entity
+     * @return corresponding UserToAdmin DTO
+     */
+    public static UserToAdmin fromEntity(User user) {
+        return new UserToAdmin(
+            user.getId(),
+            user.getUsername(),
+            user.getRole(),
+            user.getEmail(),
+            user.getCreatedAt(),
+            user.getUpdatedAt()
+        );
+    }
+
+    /**
+     * Converts this DTO to a User entity.
+     *
+     * @return User entity populated from DTO
+     */
+    public User toEntity() {
+        User user = new User();
+        user.setId(this.Id);
+        user.setUsername(this.username);
+        user.setEmail(this.email);
+        user.setRole(this.role);
+        return user;
+    }
 }

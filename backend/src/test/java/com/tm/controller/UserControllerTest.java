@@ -86,7 +86,6 @@ class UserControllerTest {
 		Mockito.when(userService.createUser(Mockito.any(User.class))).thenReturn(u);
 		
 		mockMvc.perform(post("/users")
-				.with(user("Yann").roles("ADMIN"))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(u)))
 				.andExpect(status().isCreated())
