@@ -30,9 +30,9 @@ public class UserService {
     return userRepository.findAll();
 	}
 
-	public Optional<User> getUserById(long l) {
+	public Optional<User> getUserById(long id) {
 	
-		return userRepository.findById(l);
+		return userRepository.findById(id);
 	}
 
 	public Optional<User> getUserByEmail(String email) {
@@ -49,6 +49,14 @@ public class UserService {
 				return userRepository.save(found);
 			
 		});
+	}
+	
+	public Boolean deleteUser(Long id) {
+		if(userRepository.existsById(id)) {
+			userRepository.deleteById(id);
+			return true;
+		}
+		return false;
 	}
 
 }

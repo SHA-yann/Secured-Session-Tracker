@@ -155,4 +155,29 @@ when(userRepository.findByEmail("frank@wanado.fr")).thenReturn(Optional.empty())
 		verify(userRepository, never()).save(any(User.class));
 		
 	}
+	
+	@Test
+	void testDelUser_found() {
+		
+		when(userRepository.existsById(3L)).thenReturn(true);
+		
+		boolean result= userService.deleteUser(3L);
+		
+		assertThat(result).isTrue();
+		verify(userRepository, times(1)).existsById(3L);
+		verify(userRepository, times(1)).deleteById(3L);
+	}
+	
+	@Test
+	void testDelUser_notFound() {
+		
+		when(userRepository.existsById(99L)).thenReturn(false);
+		
+		boolean result= userService.deleteUser(99L);
+		
+		assertThat(result).isFalse();
+		verify(userRepository, times(1)).existsById(99L);
+		verify(userRepository, never()).deleteById(anyLong());
+	}
+
 }
