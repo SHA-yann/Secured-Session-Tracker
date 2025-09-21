@@ -4,11 +4,11 @@ A full-stack portfolio project using:
 **Backend:** Java 17, Spring Boot
 **Frontend:** Angular 19 (standalone components)
 **Database:** PostgreSQL
-**Methodology:** Test-Driven Development (TDD) for one feature
-**Version Control:** Git (feature-branch workflow)
 
 ## Project Purpose
-Demonstrate the ability to design, develop, test, and document a complete for job postings and applications.
+Demonstrate the ability to design, develop, test, and document a complete application for job postings and applications.
+**Methodology:** Test-Driven Development (TDD) for one feature
+**Version Control:** Git (feature-branch workflow)
 
 ## Technologies
 Java 17
@@ -59,7 +59,6 @@ PostgreSQL 15+
  npm install
 
 ## Feature register-user:POST (TDD)  on branch feature/register-user
-
 - UserServiceTest tests the creation of a user
 - UserRepositoryTest tests the persistence of a user in the db
 - UserControllerTest tests registration of a user via the REST API 
@@ -73,7 +72,16 @@ PostgreSQL 15+
 - implementing on the service layer and tests
 - implementing on the controller layer and tests
 
-## Feature delete-user:DELETE (Agile)  on branch feature/delete-user
+## Feature delete-user:DELETE (Agile) on branch feature/delete-user
 - implementing on the service layer and tests
 - implementing on the controller layer and tests
+
+Integration Test UserControllerIT to validate all the feautures through the API
+
+## Integrating spring security with jwt to secure endpoinds
+- adding JwtProvider: to generate jwt
+- setting authentication filter
+- configuring security: registering filter to spring security
+- adding DTOs for authentication
+- adding controller for authentication
 

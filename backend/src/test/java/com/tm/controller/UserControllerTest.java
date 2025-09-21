@@ -21,16 +21,20 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tm.model.Role;
 import com.tm.model.User;
+import com.tm.security.JwtAuthFilter;
 import com.tm.service.UserService;
 
 @WebMvcTest(UserController.class)
+@AutoConfigureMockMvc(addFilters=false)
 class UserControllerTest {
 
 	@Autowired
@@ -38,6 +42,9 @@ class UserControllerTest {
 	
 	@MockitoBean
 	private UserService userService;
+	
+	@MockitoBean
+	private JwtAuthFilter jwtAuthFilter;
 	
 	@Autowired
 	private ObjectMapper objectMapper;
@@ -47,14 +54,17 @@ class UserControllerTest {
 	
 	@BeforeEach
 	void init() {
-		u=new User("Yann","yannsteve@ymail.fr","secure_123","ADMIN");
-		u1=new User("john","john@free.fr","secure_123","USER");
+		u=new User("Yann","yannsteve@ymail.fr","secure_123");
+		u.setRole(Role.ADMIN);
+		u1=new User("john","john@free.fr","secure_123");
+		u1.setRole(Role.USER);
+		
 	}
 	
 	@Test
 	void shouldCreateUser() throws Exception {
 		
-		Mockito.when(userService.createUser(Mockito.any(User.class))).thenReturn(u);
+    Mockito.when(userService.createUser(Mockito.any(User.class))).thenReturn(u);
 		
 		mockMvc.perform(post("/users")
 				.contentType(MediaType.APPLICATION_JSON)
@@ -63,14 +73,14 @@ class UserControllerTest {
 				.andExpect(jsonPath("$.username").value("Yann"))
 				.andExpect(jsonPath("$.email").value("yannsteve@ymail.fr"))
 				.andExpect(jsonPath("$.password").value("secure_123"))
-				.andExpect(jsonPath("$.role").value("ADMIN"));
+				.andExpect(jsonPath("$.role").value(Role.ADMIN.name()));
 		
 		verify(userService, times(1)).createUser(any(User.class));
 	}
 	
 	@Test
-	void getAllUser_shouldReturnallUserList() throws Exception{
-		
+	void getAllUser_shouldReturnallUsers() throws Exception{
+
 		when(userService.getAllUsers()).thenReturn(Arrays.asList(u,u1));
 		
 		mockMvc.perform(get("/users")
@@ -78,7 +88,8 @@ class UserControllerTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.size()").value(2))
 				.andExpect(jsonPath("$[1].username").value("john"))
-				.andExpect(jsonPath("$[0].role").value("ADMIN"));
+				.andExpect(jsonPath("$[0].role").value(Role.ADMIN.name()));
+
 	}
 	
 	@Test
@@ -149,8 +160,8 @@ class UserControllerTest {
 				.content(objectMapper.writeValueAsString(u)))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.username").value("john"))
-				.andExpect(jsonPath("$.role").value("USER"));
-		
+				.andExpect(jsonPath("$.role").value(Role.USER.name()));
+
 		verify(userService, times(1)).updateUser(eq(1L),any(User.class));
 	}
 	

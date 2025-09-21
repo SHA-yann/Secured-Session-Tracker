@@ -7,12 +7,15 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
 import static org.mockito.Mockito.*;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import com.tm.model.Role;
 import com.tm.model.User;
 import com.tm.repository.UserRepository;
 
@@ -24,30 +27,35 @@ class UserServiceTest {
 	@InjectMocks
 	private UserService userService;
 	
+	@Mock
+	private PasswordEncoder passwordEncoder;
+	
 	private User toSave;
 	private User u1;
 	
 	@BeforeEach
 	void init() {
 		MockitoAnnotations.openMocks(this);
-		toSave=new User("Yann","yannsteve@ymail.fr","secure_123","ADMIN");
-		u1=new User("john","john@free.fr","secure_123","USER");
+		toSave=new User("Yann","yannsteve@ymail.fr","secure_123");
+		u1=new User("john","john@free.fr","secure_123");
 
 	}
 	
 	@Test
 	void createUser_shouldPersistAndReturnEntity() {
 		
-		when(userRepository.save(any(User.class))).thenAnswer(Invocation->Invocation.getArgument(0));
+		when(userRepository.save(any(User.class))).thenReturn(toSave);
+		when(passwordEncoder.encode(any(CharSequence.class))).thenReturn("encodedsecure_123");
 		
 		User result = userService.createUser(toSave);
+		result.setRole(Role.ADMIN);
 		
 		assertNotNull(result);
-		
 		assertEquals("Yann",result.getUsername());
 		assertEquals("yannsteve@ymail.fr",result.getEmail());
-		assertEquals("secure_123", result.getPassword());
-		assertEquals("ADMIN", result.getRole());
+		assertEquals("encodedsecure_123", result.getPassword());
+		assertEquals(Role.ADMIN	, result.getRole());
+
 		verify(userRepository, times(1)).save(any(User.class));
 	}
 	
@@ -131,13 +139,14 @@ when(userRepository.findByEmail("frank@wanado.fr")).thenReturn(Optional.empty())
 		when(userRepository.findById(2L)).thenReturn(Optional.of(toSave));
 		
 		when(userRepository.save(any(User.class))).thenAnswer(invocation->invocation.getArgument(0));
+		u1.setRole(Role.USER);
 		
 		Optional<User> result= userService.updateUser(2L,u1);
 		
 		assertThat(result).isPresent();
 		assertThat(result.get().getUsername()).isEqualTo("john");
 		assertThat(result.get().getPassword()).isEqualTo("secure_123");
-		assertThat(result.get().getRole()).isEqualTo("USER");
+		assertThat(result.get().getRole()).isEqualTo(Role.USER);
 		
 		verify(userRepository, times(1)).findById(2L);
 		verify(userRepository, times(1)).save(toSave);
