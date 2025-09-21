@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -53,7 +54,7 @@ public class UserController {
 	
 	// GET all users
 	@GetMapping("/users")
-	//@PreAuthorize("hasRole('ADMIN')")
+	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<Page<UserToAdmin>> getAllUsers(@PageableDefault(size=10,sort="username") Pageable pageable){
 		Page<User> users = userService.getAllUsers(pageable);
 		Page<UserToAdmin> toPage= users.map(UserToAdmin::fromEntity);
@@ -63,7 +64,7 @@ public class UserController {
 	
 	// GET user by id
 	@GetMapping("/users/{id}")
-	//@PreAuthorize("hasRole('ADMIN') or #id==principal.id")
+	@PreAuthorize("hasRole('ADMIN') or #id==principal.id")
 	public ResponseEntity<UserToAdmin> getUserById(@PathVariable Long id){
 		
 		return userService.getUserById(id)
@@ -74,7 +75,7 @@ public class UserController {
 	
 	// GET user by email
 	@GetMapping("/users/mail/{email}")
-	//@PreAuthorize("hasRole('ADMIN') or #id==principal.id")
+	@PreAuthorize("hasRole('ADMIN') or #id==principal.id")
 	public ResponseEntity<UserToAdmin> getUserByEmail(@PathVariable String email){
 		return userService.getUserByEmail(email)
 							.map(UserToAdmin::fromEntity)
@@ -83,7 +84,7 @@ public class UserController {
 	}
 	
 	@PutMapping("/users/{id}")
-	//@PreAuthorize("hasRole('ADMIN') or #id==principal.id")
+	@PreAuthorize("hasRole('ADMIN') or #id==principal.id")
 	public ResponseEntity<UserToAdmin> updateUser(@PathVariable Long id, @RequestBody User user){
 		
 			return userService.updateUser(id, user)
@@ -96,7 +97,7 @@ public class UserController {
 	
 	//DELETE user
 	@DeleteMapping("/users/{id}")
-	//@PreAuthorize("hasRole('ADMIN')")
+	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<Void> deleteUser(@PathVariable Long id){
 		
 		userService.deleteUser(id);

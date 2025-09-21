@@ -1,20 +1,19 @@
 package com.tm.controller;
 
-import com.tm.model.RefreshToken;
 
+import jakarta.servlet.http.Cookie;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Getter @Setter
+@Getter
 public class AuthResponse {
 
 	private String accessToken;
-	private RefreshToken refreshToken;
+	private Cookie refreshCookie;
 	
 }

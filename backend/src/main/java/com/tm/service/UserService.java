@@ -26,7 +26,7 @@ public class UserService {
 	}
 
 	@Transactional
-	//@PreAuthorize("hasRole('ADMIN')")
+	@PreAuthorize("hasRole('ADMIN')")
 	public User createUser(User u) {
 		u.setPassword(new BCryptPasswordEncoder(12).encode(u.getPassword()));
 		u.setRole(Role.USER);
@@ -38,19 +38,19 @@ public class UserService {
 		return userRepository.save(u);
 	}
 	
-	//@PreAuthorize("hasRole('ADMIN')")
+	@PreAuthorize("hasRole('ADMIN')")
 	public Page<User> getAllUsers(Pageable pageable){
 		return userRepository.findAll(pageable);
 	}
 
-	//@PreAuthorize("hasRole('ADMIN') or #id==principal.id")
+	@PreAuthorize("hasRole('ADMIN') or #id==principal.id")
 	public Optional<User> getUserById(long id) {
 	
 		return Optional.of(userRepository.findById(id)
 				.orElseThrow(()-> new UserNotFoundException("User with id "+id+" not found")));
 	}
 
-	//@PreAuthorize("hasRole('ADMIN') or #id==principal.id")
+	@PreAuthorize("hasRole('ADMIN') or #id==principal.id")
 	public Optional<User> getUserByEmail(String email) {
 
 		return Optional.of(userRepository.findByEmail(email)
@@ -58,7 +58,7 @@ public class UserService {
 	}
 
 	@Transactional
-	//@PreAuthorize("hasRole('ADMIN')or #id==principal.id")
+	@PreAuthorize("hasRole('ADMIN')or #id==principal.id")
 	public Optional<User> updateUser(long id, User update) {
 	    return Optional.of(userRepository.findById(id)
 	        .map(found -> {
@@ -81,7 +81,7 @@ public class UserService {
 
 	
 	@Transactional
-	//@PreAuthorize("hasRole('ADMIN')")
+	@PreAuthorize("hasRole('ADMIN')")
 	public void deleteUser(Long id) {
 		if(!userRepository.existsById(id)) {
 			throw new UserNotFoundException("User with id "+id+" not found");
@@ -91,13 +91,13 @@ public class UserService {
 		
 	}
 
-	//@PreAuthorize("hasRole('ADMIN')")
+	@PreAuthorize("hasRole('ADMIN')")
 	public Optional<User> findByName(String username) {
 		
 		return userRepository.findByUsername(username);
 	}
 	
-	//@PreAuthorize("hasRole('ADMIN')")
+	@PreAuthorize("hasRole('ADMIN')")
 	public Page<User> searchUsers(String username, Role role, Pageable pageable){
 		
 		if(username != null && !username.isBlank()) {

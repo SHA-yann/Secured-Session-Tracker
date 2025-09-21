@@ -12,24 +12,23 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import com.tm.model.User;
-import com.tm.repository.UserRepository;
 
-import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
 @Service
-@NoArgsConstructor
+//@AllArgsConstructor
 public class MyUserDetailsService implements UserDetailsService{
 
-	private UserRepository userRepository;
+	private UserService userService;
 	
-	public MyUserDetailsService(UserRepository userRepository) {
-		this.userRepository=userRepository;
+	public MyUserDetailsService(UserService userService) {
+		this.userService=userService;
 	}
 	
 	@Override
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException{
 		
-	Optional<User> user= userRepository.findByUsername(username);
+	Optional<User> user= userService.findByName(username);
 		
 		if(!user.isPresent())
 			throw new UsernameNotFoundException("User not found");

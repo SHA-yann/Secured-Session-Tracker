@@ -6,16 +6,22 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.tm.model.User;
-import com.tm.repository.UserRepository;
 import com.tm.service.UserService;
 
 import jakarta.transaction.Transactional;
@@ -36,8 +42,11 @@ class AuthControllerIT {
 	void init() {
 		
 		User user=new User("Yann","yannsteve@gmail.com","plainPassword123");
-		User saved=userService.createUser(user);
-		System.out.println(saved.getUsername()+","+saved.getPassword()+","+saved.getEmail()+","+saved.getCreatedAt()+","+saved.getRole()+","+saved.getUpdatedAt());
+		List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_ADMIN"));
+	    Authentication auth = new UsernamePasswordAuthenticationToken("Yann", "plainPassword123", authorities);
+	    SecurityContextHolder.getContext().setAuthentication(auth);
+		
+		userService.createUser(user);
 	}
 	
 	@Test
@@ -53,7 +62,7 @@ class AuthControllerIT {
 	}
 	
 	@Test
-	void refresh_should_rotate_and_issueNewToken() throws Exception{
+	void refresh_should_rotate_and_issueNewToken() throws Exception{//KO
 		
 		var loginResult = mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
 															.content("{\"username\":\"Yann\",\"password\":\"plainPassword123\"}"))

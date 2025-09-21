@@ -13,6 +13,11 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import static org.mockito.Mockito.*;
@@ -46,6 +51,10 @@ class UserServiceTest {
 		toSave=new User("Yann","yannsteve@ymail.fr","secure_123");
 		u1=new User("John","john@free.fr","secure_123");
 		pageable=PageRequest.of(0, 2,Sort.by("username").ascending());
+		
+		List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_ADMIN"));
+	    Authentication auth = new UsernamePasswordAuthenticationToken("Yann", "secure_123", authorities);
+	    SecurityContextHolder.getContext().setAuthentication(auth);
 		
 	}
 	
@@ -140,7 +149,7 @@ class UserServiceTest {
 	}
 	
 	@Test
-	void test_UpdateUser_found() {// KO
+	void test_UpdateUser_found() {
 		u1.setRole(Role.USER);
 		when(userRepository.findById(2L)).thenReturn(Optional.of(toSave));
 	    when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -148,7 +157,7 @@ class UserServiceTest {
 	    Optional<User> result = userService.updateUser(2L, u1);
 
 	    assertThat(result).isNotNull();
-	    assertThat(result.get().getUsername()).isEqualTo("john");
+	    assertThat(result.get().getUsername()).isEqualTo("John");
 	    assertThat(result.get().getRole()).isEqualTo(Role.USER);
 
 	    verify(userRepository, times(1)).findById(2L);

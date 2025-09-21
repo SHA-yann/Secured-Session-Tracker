@@ -31,6 +31,11 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -68,6 +73,10 @@ class UserControllerTest {
 		u1=new User("john","john@free.fr","secure_123");
 		u1.setRole(Role.USER);
 		pageable=PageRequest.of(0, 10);
+		
+		List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_ADMIN"));
+	    Authentication auth = new UsernamePasswordAuthenticationToken("Yann", "secure_123", authorities);
+	    SecurityContextHolder.getContext().setAuthentication(auth);
 		
 	}
 	
