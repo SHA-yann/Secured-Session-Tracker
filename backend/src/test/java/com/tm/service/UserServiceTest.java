@@ -32,6 +32,7 @@ class UserServiceTest {
 		MockitoAnnotations.openMocks(this);
 		toSave=new User("Yann","yannsteve@ymail.fr","secure_123","ADMIN");
 		u1=new User("john","john@free.fr","secure_123","USER");
+
 	}
 	
 	@Test
@@ -178,4 +179,5 @@ when(userRepository.findByEmail("frank@wanado.fr")).thenReturn(Optional.empty())
 		verify(userRepository, times(1)).existsById(99L);
 		verify(userRepository, never()).deleteById(anyLong());
 	}
+
 }

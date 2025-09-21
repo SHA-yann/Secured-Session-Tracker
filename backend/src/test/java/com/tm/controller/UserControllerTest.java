@@ -56,7 +56,7 @@ class UserControllerTest {
 		
 		Mockito.when(userService.createUser(Mockito.any(User.class))).thenReturn(u);
 		
-		mockMvc.perform(post("/api/users")
+		mockMvc.perform(post("/users")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(u)))
 				.andExpect(status().isCreated())
@@ -73,7 +73,7 @@ class UserControllerTest {
 		
 		when(userService.getAllUsers()).thenReturn(Arrays.asList(u,u1));
 		
-		mockMvc.perform(get("/api/users")
+		mockMvc.perform(get("/users")
 				.contentType(MediaType.APPLICATION_JSON))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.size()").value(2))
@@ -86,7 +86,7 @@ class UserControllerTest {
 		
 		when(userService.getAllUsers()).thenReturn(Collections.emptyList());
 		
-		mockMvc.perform(get("/api/users")
+		mockMvc.perform(get("/users")
 				.contentType(MediaType.APPLICATION_JSON))
 				.andExpect(status().isOk())
 				.andExpect(content().json("[]"));
@@ -99,7 +99,7 @@ class UserControllerTest {
 		
 		when(userService.getUserById(4L)).thenReturn(Optional.of(u));
 		
-		mockMvc.perform(get("/api/users/4")).andExpect(status().isOk())
+		mockMvc.perform(get("/users/4")).andExpect(status().isOk())
 				.andExpect(jsonPath("$.username").value("Yann"))
 				.andExpect(jsonPath("$.email").value("yannsteve@ymail.fr"));
 		
@@ -111,7 +111,7 @@ class UserControllerTest {
 		
 		when(userService.getUserById(99L)).thenReturn(Optional.empty());
 		
-		mockMvc.perform(get("/api/users/99")).andExpect(status().isNotFound());
+		mockMvc.perform(get("/users/99")).andExpect(status().isNotFound());
 		
 		verify(userService, times(1)).getUserById(99L);
 	}
@@ -121,7 +121,7 @@ class UserControllerTest {
 		
 		when(userService.getUserByEmail("john@free.fr")).thenReturn(Optional.of(u1));
 		
-		mockMvc.perform(get("/api/users/mail/{email}", "john@free.fr"))
+		mockMvc.perform(get("/users/mail/{email}", "john@free.fr"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.username").value("john"));
 		
@@ -133,7 +133,7 @@ class UserControllerTest {
 		
 		when(userService.getUserByEmail("ghost@free.fr")).thenReturn(Optional.empty());
 		
-		mockMvc.perform(get("/api/users/mail/{email}", "ghost@free.fr"))
+		mockMvc.perform(get("/users/mail/{email}", "ghost@free.fr"))
 				.andExpect(status().isNotFound());
 		
 		verify(userService, times(1)).getUserByEmail("ghost@free.fr");
@@ -144,7 +144,7 @@ class UserControllerTest {
 		
 		when(userService.updateUser(eq(1L),any(User.class))).thenReturn(Optional.of(u1));
 		
-		mockMvc.perform(put("/api/users/1")
+		mockMvc.perform(put("/users/1")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(u)))
 				.andExpect(status().isOk())
@@ -159,7 +159,7 @@ class UserControllerTest {
 	
 		when(userService.updateUser(eq(99L),any(User.class))).thenReturn(Optional.empty());
 		
-		mockMvc.perform(put("/api/users/99")
+		mockMvc.perform(put("/users/99")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(u1)))
 				.andExpect(status().isNotFound());
@@ -172,7 +172,7 @@ class UserControllerTest {
 		
 		when(userService.deleteUser(2L)).thenReturn(true);
 		
-		mockMvc.perform(delete("/api/users/2")).andExpect(status().isNoContent());
+		mockMvc.perform(delete("/users/2")).andExpect(status().isNoContent());
 		verify(userService, times(1)).deleteUser((2L));
 	}
 	
@@ -181,7 +181,8 @@ class UserControllerTest {
 		
 		when(userService.deleteUser(99L)).thenReturn(false);
 		
-		mockMvc.perform(delete("/api/users/99")).andExpect(status().isNotFound());
+		mockMvc.perform(delete("/users/99")).andExpect(status().isNotFound());
 		verify(userService, times(1)).deleteUser((99L));
 	}
+
 }

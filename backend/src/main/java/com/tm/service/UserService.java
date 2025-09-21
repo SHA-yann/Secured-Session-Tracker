@@ -15,16 +15,19 @@ public class UserService {
 	private final UserRepository userRepository;
 	
 	public UserService(UserRepository userRepository) {
-		this.userRepository=userRepository;
+		
+    this.userRepository=userRepository;
 	}
 
 	@Transactional
 	public User createUser(User u) {
-		return userRepository.save(u);
+		
+    return userRepository.save(u);
 	}
 	
 	public List<User> getAllUsers(){
-		return userRepository.findAll();
+		
+    return userRepository.findAll();
 	}
 
 	public Optional<User> getUserById(long id) {
