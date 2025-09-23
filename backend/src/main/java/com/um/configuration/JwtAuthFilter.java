@@ -1,14 +1,15 @@
-package com.tm.security;
+package com.um.configuration;
 
 import java.io.IOException;
 
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.tm.service.MyUserDetailsService;
+import com.um.service.MyUserDetailsService;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -32,7 +33,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
      * @param jwtProvider JWT utility for token parsing and validation
      * @param userDetailsService Service to load user details
      */
-    public JwtAuthFilter(JwtProvider jwtProvider, MyUserDetailsService userDetailsService) {
+    public JwtAuthFilter(JwtProvider jwtProvider, @Lazy MyUserDetailsService userDetailsService) {
         this.jwtProvider = jwtProvider;
         this.userDetailsService = userDetailsService;
     }

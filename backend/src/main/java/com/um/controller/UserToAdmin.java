@@ -1,11 +1,11 @@
-package com.tm.controller;
+package com.um.controller;
 
 import java.time.Instant;
 
 import org.springframework.stereotype.Component;
 
-import com.tm.model.Role;
-import com.tm.model.User;
+import com.um.model.Role;
+import com.um.model.User;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;

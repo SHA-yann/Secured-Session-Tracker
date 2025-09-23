@@ -15,13 +15,14 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import com.um.Exceptions.UserNotFoundException;
+import com.um.model.Role;
+import com.um.model.User;
+import com.um.repository.UserRepository;
+import com.um.service.UserService;
+
 import java.util.List;
 import java.util.Optional;
-
-import com.tm.Exceptions.UserNotFoundException;
-import com.tm.model.Role;
-import com.tm.model.User;
-import com.tm.repository.UserRepository;
 
 class UserServiceTest {
 

@@ -1,9 +1,9 @@
 package com.tm.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.tm.model.Role;
-import com.tm.model.User;
-import com.tm.service.UserService;
+import com.um.controller.UserToAdmin;
+import com.um.model.User;
+import com.um.service.UserService;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

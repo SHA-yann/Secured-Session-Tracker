@@ -1,4 +1,4 @@
-package com.tm.model;
+package com.um.model;
 
 /**
  * Enumeration representing the roles a user can have in the system.

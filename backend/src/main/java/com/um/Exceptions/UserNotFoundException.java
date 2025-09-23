@@ -1,4 +1,4 @@
-package com.tm.Exceptions;
+package com.um.Exceptions;
 
 /**
  * Exception thrown when a requested user cannot be found in the system.

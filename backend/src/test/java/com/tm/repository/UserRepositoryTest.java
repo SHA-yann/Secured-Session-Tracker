@@ -12,8 +12,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
-import com.tm.model.Role;
-import com.tm.model.User;
+import com.um.model.Role;
+import com.um.model.User;
+import com.um.repository.UserRepository;
 
 @DataJpaTest // Spins up an in-memory database for repository testing only, without loading the full Spring context
 class UserRepositoryTest {

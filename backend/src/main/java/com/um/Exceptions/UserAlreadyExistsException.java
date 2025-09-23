@@ -1,4 +1,4 @@
-package com.tm.Exceptions;
+package com.um.Exceptions;
 
 /**
  * Exception thrown when an attempt is made to create a user

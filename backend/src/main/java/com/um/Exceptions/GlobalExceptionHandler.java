@@ -1,12 +1,11 @@
-package com.tm.controller;
+package com.um.Exceptions;
 
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-
-import com.tm.Exceptions.UserAlreadyExistsException;
-import com.tm.Exceptions.UserNotFoundException;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -16,6 +15,7 @@ import lombok.Setter;
  * Handles specific exceptions and provides structured error responses.
  */
 @RestControllerAdvice
+@Order(Ordered.LOWEST_PRECEDENCE)
 public class GlobalExceptionHandler {
 
     /**
@@ -43,18 +43,31 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Handles generic exceptions and returns 500 status.
+     * Handles IllegalArgumentException and returns 500 status.
      *
      * @param ex the exception
      * @return structured error response
      */
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGeneric(Exception ex) {
-        ErrorResponse error = new ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                "An unexpected error occurred");
-        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegal(IllegalArgumentException ex) {
+        ErrorResponse error = new ErrorResponse(HttpStatus.BAD_REQUEST.value(),
+                "An argument is not correct "+ex.getMessage());
+        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
 
+    /**
+     * Handles NullPointerException and returns 500 status.
+     *
+     * @param ex the exception
+     * @return structured error response
+     */
+    @ExceptionHandler(NullPointerException.class)
+    public ResponseEntity<ErrorResponse> handleNull(NullPointerException ex) {
+        ErrorResponse error = new ErrorResponse(HttpStatus.BAD_REQUEST.value(),
+                "cannot reference a null object "+ex.getMessage());
+        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+    }
+    
     /**
      * DTO for structured error responses.
      */

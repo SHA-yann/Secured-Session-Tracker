@@ -1,4 +1,4 @@
-package com.tm.controller;
+package com.um.controller;
 
 import java.util.Collections;
 import java.util.Map;
@@ -12,32 +12,48 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.tm.service.AuthService;
+import com.um.service.AuthService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
- * REST controller for authentication operations.
- * Supports login, token refresh, and logout.
+ * REST controller handling authentication operations:
+ * <ul>
+ *     <li>Login with credentials</li>
+ *     <li>Refreshing JWT access tokens</li>
+ *     <li>Logging out and revoking refresh tokens</li>
+ * </ul>
  */
 @RestController
 @RequestMapping("/auth")
+@Tag(name = "Authentication", description = "Endpoints for login, refresh, and logout")
 public class AuthController {
 
     private final AuthService authService;
 
+    /**
+     * Creates a new {@code AuthController}.
+     *
+     * @param authService service providing authentication logic
+     */
     public AuthController(AuthService authService) {
         this.authService = authService;
     }
 
     /**
-     * Login endpoint.
-     * Authenticates a user and returns an access token and refresh cookie.
+     * Authenticates a user with username and password.
+     * <ul>
+     *     <li>Valid credentials → returns JWT access token and sets refresh cookie</li>
+     *     <li>Invalid credentials → returns 401 Unauthorized</li>
+     * </ul>
      *
-     * @param request  authentication request containing username and password
-     * @param response HTTP response to set refresh cookie
-     * @return access token in response body or 401 if credentials are invalid
+     * @param request  the authentication request containing username and password
+     * @param response the HTTP response, used to add the refresh token cookie
+     * @return 200 OK with access token or 401 Unauthorized if credentials are invalid
      */
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody AuthRequest request, HttpServletResponse response) {
@@ -53,14 +69,18 @@ public class AuthController {
     }
 
     /**
-     * Refresh token endpoint.
-     * Issues a new access token and refresh cookie if the existing refresh token is valid.
+     * Refreshes authentication using a valid refresh token.
+     * <ul>
+     *     <li>Valid refresh token → issues new access token and rotates refresh cookie</li>
+     *     <li>Missing or invalid token → returns 401 Unauthorized</li>
+     * </ul>
      *
-     * @param request  HTTP request containing cookies
-     * @param response HTTP response to set new refresh cookie
-     * @return new AuthResponse with access token and cookie or 401 if invalid
+     * @param request  the HTTP request containing cookies
+     * @param response the HTTP response, used to set the new refresh token cookie
+     * @return 200 OK with new {@link AuthResponse} or 401 Unauthorized
      */
     @PostMapping("/refresh")
+    @Operation(security=@SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<?> refresh(HttpServletRequest request, HttpServletResponse response) {
         AuthResponse authResponse = authService.refresh(request);
 
@@ -75,13 +95,13 @@ public class AuthController {
     }
 
     /**
-     * Logout endpoint.
-     * Revokes all refresh tokens for the given user and clears the refresh cookie.
+     * Logs a user out by revoking refresh tokens and clearing the refresh cookie.
      *
-     * @param req JSON map containing the "username" key
-     * @return 204 No Content if successful, 404 if user not found
+     * @param req JSON body containing the {@code username} key
+     * @return 204 No Content if successful, 404 Not Found if the user does not exist or is already logged out
      */
     @PostMapping("/logout")
+    @Operation(security=@SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<?> logout(@RequestBody Map<String, String> req) {
         String username = req.get("username");
         boolean success = authService.logout(username);

@@ -20,8 +20,8 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 
-import com.tm.model.User;
-import com.tm.service.UserService;
+import com.um.model.User;
+import com.um.service.UserService;
 
 import jakarta.transaction.Transactional;
 

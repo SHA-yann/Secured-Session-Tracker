@@ -1,4 +1,4 @@
-package com.tm.service;
+package com.um.service;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -6,9 +6,9 @@ import java.time.temporal.ChronoUnit;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import com.tm.model.RefreshToken;
-import com.tm.model.User;
-import com.tm.repository.RefreshTokenRepository;
+import com.um.model.RefreshToken;
+import com.um.model.User;
+import com.um.repository.RefreshTokenRepository;
 
 /**
  * Service managing the lifecycle of refresh tokens.

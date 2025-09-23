@@ -1,4 +1,4 @@
-package com.tm.security;
+package com.um.configuration;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
@@ -12,7 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
-import com.tm.model.Role;
+import com.um.model.Role;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;

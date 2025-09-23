@@ -40,11 +40,12 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.tm.Exceptions.UserNotFoundException;
-import com.tm.model.Role;
-import com.tm.model.User;
-import com.tm.security.JwtAuthFilter;
-import com.tm.service.UserService;
+import com.um.Exceptions.UserNotFoundException;
+import com.um.configuration.JwtAuthFilter;
+import com.um.controller.UserController;
+import com.um.model.Role;
+import com.um.model.User;
+import com.um.service.UserService;
 
 @WebMvcTest(UserController.class)
 @AutoConfigureMockMvc(addFilters=false)

@@ -1,20 +1,22 @@
-package com.tm.service;
+package com.um.service;
 
 import java.util.Optional;
 
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.tm.Exceptions.*;
-import com.tm.controller.UserToAdmin;
-import com.tm.model.Role;
-import com.tm.model.User;
-import com.tm.repository.UserRepository;
+import com.um.Exceptions.*;
+import com.um.controller.UserToAdmin;
+import com.um.model.Role;
+import com.um.model.User;
+import com.um.repository.UserRepository;
 
 /**
  * Service for user management.
@@ -24,15 +26,17 @@ import com.tm.repository.UserRepository;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     /**
-     * Constructor injecting UserRepository.
+     * Constructs a UserService with required dependencies.
      *
-     * @param userRepository repository for user entities
-     * @param userToAdmin    auxiliary controller (currently unused in constructor)
+     * @param userRepository repository for accessing user entities
+     * @param passwordEncoder encoder for hashing user passwords
      */
-    public UserService(UserRepository userRepository, UserToAdmin userToAdmin) {
+    public UserService(UserRepository userRepository,@Lazy PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+		this.passwordEncoder = passwordEncoder;
     }
 
     /**
@@ -44,7 +48,7 @@ public class UserService {
      */
     @Transactional
     public User createUser(User user) {
-        user.setPassword(new BCryptPasswordEncoder(12).encode(user.getPassword()));
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
         user.setRole(Role.USER);
 
         if (userRepository.existsByUsername(user.getUsername())) {

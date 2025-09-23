@@ -1,4 +1,4 @@
-package com.tm.controller;
+package com.um.controller;
 
 import java.net.URI;
 
@@ -10,20 +10,31 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import com.tm.model.Role;
-import com.tm.model.User;
-import com.tm.service.UserService;
+import com.um.model.Role;
+import com.um.model.User;
+import com.um.service.UserService;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
- * REST controller for managing User entities.
- * Provides endpoints for CRUD operations, search, and registration.
+ * Controller that exposes REST endpoints for managing users.
+ * Provides registration, retrieval, update, deletion, and search functionality.
  */
 @RestController
 @RequestMapping("/")
+@Tag(name = "Users", description = "Endpoints for user management")
+
 public class UserController {
 
     private final UserService userService;
 
+    /**
+     * Creates a new {@code UserController}.
+     *
+     * @param userService service for user management operations
+     */
     public UserController(UserService userService) {
         this.userService = userService;
     }
@@ -31,32 +42,32 @@ public class UserController {
     /**
      * Registers a new user.
      *
-     * @param user the user to register
-     * @return ResponseEntity with location header and created user DTO
+     * @param user the user to create
+     * @return a response containing the created user and the location URI
      */
     @PostMapping("/users")
     public ResponseEntity<?> register(@RequestBody User user) {
-
         UserToAdmin created = UserToAdmin.fromEntity(userService.createUser(user));
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
                 .buildAndExpand(created.getId())
                 .toUri();
 
-            return ResponseEntity.created(location).body(created);
-        
+        return ResponseEntity.created(location).body(created);
     }
 
     /**
      * Retrieves all users with pagination.
-     * Admin-only access.
+     * Accessible to administrators only.
      *
-     * @param pageable pagination info
-     * @return page of UserToAdmin DTOs
+     * @param pageable pagination information
+     * @return a page of users
      */
     @GetMapping("/users")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Page<UserToAdmin>> getAllUsers(@PageableDefault(size = 10, sort = "username") Pageable pageable) {
+    @Operation(security=@SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<Page<UserToAdmin>> getAllUsers(
+            @PageableDefault(size = 10, sort = "username") Pageable pageable) {
         Page<User> users = userService.getAllUsers(pageable);
         Page<UserToAdmin> dtoPage = users.map(UserToAdmin::fromEntity);
         return ResponseEntity.ok(dtoPage);
@@ -64,13 +75,14 @@ public class UserController {
 
     /**
      * Retrieves a user by ID.
-     * Admin or the user themselves.
+     * Accessible to administrators or the user themselves.
      *
-     * @param id user ID
-     * @return UserToAdmin DTO or 404
+     * @param id the user ID
+     * @return the user if found, otherwise 404
      */
     @GetMapping("/users/{id}")
     @PreAuthorize("hasRole('ADMIN') or #id==principal.id")
+    @Operation(security=@SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<UserToAdmin> getUserById(@PathVariable Long id) {
         return userService.getUserById(id)
                 .map(UserToAdmin::fromEntity)
@@ -80,13 +92,14 @@ public class UserController {
 
     /**
      * Retrieves a user by email.
-     * Admin or the user themselves.
+     * Accessible to administrators or the user themselves.
      *
-     * @param email user email
-     * @return UserToAdmin DTO or 404
+     * @param email the user email
+     * @return the user if found, otherwise 404
      */
     @GetMapping("/users/mail/{email}")
     @PreAuthorize("hasRole('ADMIN') or #id==principal.id")
+    @Operation(security=@SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<UserToAdmin> getUserByEmail(@PathVariable String email) {
         return userService.getUserByEmail(email)
                 .map(UserToAdmin::fromEntity)
@@ -96,14 +109,15 @@ public class UserController {
 
     /**
      * Updates a user.
-     * Admin or the user themselves.
+     * Accessible to administrators or the user themselves.
      *
-     * @param id   user ID
-     * @param user updated user data
-     * @return updated UserToAdmin DTO or 404
+     * @param id   the user ID
+     * @param user the updated user data
+     * @return the updated user if found, otherwise 404
      */
     @PutMapping("/users/{id}")
     @PreAuthorize("hasRole('ADMIN') or #id==principal.id")
+    @Operation(security=@SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<UserToAdmin> updateUser(@PathVariable Long id, @RequestBody User user) {
         return userService.updateUser(id, user)
                 .map(UserToAdmin::fromEntity)
@@ -113,13 +127,14 @@ public class UserController {
 
     /**
      * Deletes a user.
-     * Admin-only access.
+     * Accessible to administrators only.
      *
-     * @param id user ID
-     * @return 204 No Content
+     * @param id the user ID
+     * @return 204 if deleted
      */
     @DeleteMapping("/users/{id}")
     @PreAuthorize("hasRole('ADMIN')")
+    @Operation(security=@SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
@@ -127,14 +142,15 @@ public class UserController {
 
     /**
      * Searches users by username or role with pagination.
-     * Admin-only access.
+     * Accessible to administrators only.
      *
-     * @param username optional username fragment
+     * @param username optional username filter
      * @param role     optional role filter
-     * @param pageable pagination info
-     * @return page of UserToAdmin DTOs
+     * @param pageable pagination information
+     * @return a page of matching users
      */
-    // @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(security=@SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<Page<UserToAdmin>> searchUsers(
             @RequestParam(required = false) String username,
             @RequestParam(required = false) Role role,

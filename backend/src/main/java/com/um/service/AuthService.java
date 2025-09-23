@@ -1,4 +1,4 @@
-package com.tm.service;
+package com.um.service;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -10,12 +10,12 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
-import com.tm.controller.AuthRequest;
-import com.tm.controller.AuthResponse;
-import com.tm.model.RefreshToken;
-import com.tm.model.User;
-import com.tm.security.CookieProvider;
-import com.tm.security.JwtProvider;
+import com.um.configuration.CookieProvider;
+import com.um.configuration.JwtProvider;
+import com.um.controller.AuthRequest;
+import com.um.controller.AuthResponse;
+import com.um.model.RefreshToken;
+import com.um.model.User;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;

@@ -1,4 +1,4 @@
-package com.tm.model;
+package com.um.model;
 
 import java.time.Instant;
 import java.util.UUID;

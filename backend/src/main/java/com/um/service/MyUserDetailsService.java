@@ -1,17 +1,19 @@
-package com.tm.service;
+package com.um.service;
 
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import com.tm.model.User;
+import com.um.model.User;
 
 /**
  * Custom UserDetailsService implementation for Spring Security.
@@ -21,14 +23,16 @@ import com.tm.model.User;
 public class MyUserDetailsService implements UserDetailsService {
 
     private final UserService userService;
+    private final PasswordEncoder passwordEncoder;
 
     /**
      * Constructor injecting UserService dependency.
      *
      * @param userService service to access user data
      */
-    public MyUserDetailsService(UserService userService) {
+    public MyUserDetailsService(UserService userService, @Lazy PasswordEncoder passwordEncoder) {
         this.userService = userService;
+        this.passwordEncoder = passwordEncoder;
     }
 
     /**
