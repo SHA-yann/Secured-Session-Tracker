@@ -1,12 +1,12 @@
-# portfolio App
+# User management App
 
-A full-stack portfolio project using:
+A full-stack project using:
 **Backend:** Java 17, Spring Boot
 **Frontend:** Angular 19 (standalone components)
 **Database:** PostgreSQL
 
 ## Project Purpose
-Demonstrate the ability to design, develop, test, and document a complete application for job postings and applications.
+Demonstrate the abilities through a simple application for user management.
 **Methodology:** Test-Driven Development (TDD) for one feature
 **Version Control:** Git (feature-branch workflow)
 
