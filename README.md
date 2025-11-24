@@ -70,8 +70,7 @@ Postman / Swagger UI via http://localhost:8080/swagger-ui/index.html
 
  ### 3. Run
  cd backend
- mvn spring-boot:run
-
+ ./mvnw spring-boot:run for Linux/macOS or mvn spring-boot:run for Windows (if maven is installed, otherwise mvn.cmd)
 
  ## API Documentation
 
@@ -90,6 +89,19 @@ Postman / Swagger UI via http://localhost:8080/swagger-ui/index.html
 | GET     | `/users/{id}`         |         Find a user            | ADMIN       | user id                                       |
 | PUT     | `/users/{username}`   |         Update a user          | ADMIN/USER  | username and body(attributs except username)  |
 | DELETE  | `/users/{id}`         |         Delete a user          | ADMIN       | user id                                       |
+| GET     | `/users/search`       | Recherche des utilisateurs avec pagination | ADMIN |`query` (username/role), `page`, `size` |
+
+### Paginated User Search
+Endpoint to search for users by a **keyword** (`username` or `role`) and retrieve results **page by page**.
+
+**Parameters:**
+- `query` (required): keyword to search for
+- `page` (optional): page number (default = 0)
+- `size` (optional): number of results per page (default = 10)
+
+**Example curl:**
+curl -X GET "http://localhost:8080/users/search?query=john&page=0&size=5" \
+  -H "Authorization: Bearer <your_jwt_token>"
 
 
 ## Authentication / refresh
@@ -122,13 +134,15 @@ To test with different roles:
 Create users with role: USER or role: ADMIN.
 Authenticate each user to obtain the corresponding token.
 Include the token in the request header: Authorization: Bearer <token>.
+
 ### Example of a restricted endpoint:
-DELETE /api/users/{id} → accessible only by an ADMIN user.
+DELETE /users/{id} → accessible only by an ADMIN user.
+GET /users/mail/{email } → accessible only by an ADMIN user.
 
 ## Tests
 Run unit and integration tests:
-./mvnw test
-./mvnw verify
+./mvnw test  for Linux/macOS or mvn test for Windows (if maven is installed, otherwise mvn.cmd)
+./mvnw verify for Linux/macOS or mvn test for Windows (if maven is installed, otherwise mvn.cmd)
 
 ## Contribution
 1. Fork the project.
