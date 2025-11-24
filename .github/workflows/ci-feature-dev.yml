@@ -46,8 +46,9 @@ jobs:
             ${{ runner.os }}-maven-
 
       - name: Build and test with Maven
-        run: mvn clean verify --batch-mode
+        run: ./mvn clean verify --batch-mode
         working-directory: .
 
       - name: Run Checkstyle
-        run: mvn checkstyle:checkstyle
+        run: ./mvn checkstyle:checkstyle
+        working-directory: .
