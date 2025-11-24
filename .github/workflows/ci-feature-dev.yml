@@ -32,7 +32,7 @@ jobs:
       - name: Debug
         run: |
           pwd
-          ls-l
+          ls -l
           
       - name: Build and test with Maven
         env:
