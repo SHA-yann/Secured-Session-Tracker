@@ -37,13 +37,7 @@ jobs:
           SPRING_DATASOURCE_DRIVERCLASSNAME: org.h2.Driver
           SPRING_DATASOURCE_USERNAME: sa
           SPRING_DATASOURCE_PASSWORD: ''
-        run: |
-          # Use the wrapper if present to exactly match local behavior, otherwise use mvn on PATH
-          if [ -x ../mvnw ]; then
-            ../mvnw -B -Dspring.profiles.active=test clean verify
-          else
-            mvn -B -Dspring.profiles.active=test clean verify
-          fi
+        run:  mvn -B -Dspring.profiles.active=test clean verify
         
       - name: Run Checkstyle
-        run: ../mvn checkstyle:checkstyle
+        run: mvn checkstyle:checkstyle
