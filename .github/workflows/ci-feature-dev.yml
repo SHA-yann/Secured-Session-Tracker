@@ -39,11 +39,11 @@ jobs:
           SPRING_DATASOURCE_PASSWORD: ''
         run: |
           # Use the wrapper if present to exactly match local behavior, otherwise use mvn on PATH
-          if [ -x ./mvnw ]; then
-            ./mvnw -B -Dspring.profiles.active=test clean verify
+          if [ -x ../mvnw ]; then
+            ../mvnw -B -Dspring.profiles.active=test clean verify
           else
             mvn -B -Dspring.profiles.active=test clean verify
           fi
         
       - name: Run Checkstyle
-        run: ./mvn checkstyle:checkstyle
+        run: ../mvn checkstyle:checkstyle
