@@ -38,7 +38,7 @@ jobs:
           SPRING_DATASOURCE_DRIVERCLASSNAME: org.h2.Driver
           SPRING_DATASOURCE_USERNAME: sa
           SPRING_DATASOURCE_PASSWORD: ''
-        run:  mvn -B -Dspring.profiles.active=test clean verify
+        run:  mvn -B test clean verify
         
       - name: Run Checkstyle
         run: mvn checkstyle:checkstyle
