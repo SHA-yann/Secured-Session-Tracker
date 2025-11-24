@@ -29,7 +29,11 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
-
+      - name: Debug
+        run: |
+          pwd
+          ls-l
+          
       - name: Build and test with Maven
         env:
           SPRING_PROFILES_ACTIVE: test
