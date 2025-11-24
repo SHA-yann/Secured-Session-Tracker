@@ -7,34 +7,44 @@ import jakarta.persistence.*;
 import lombok.*;
 
 /**
- * Entity representing a refresh token.
- * Used for issuing and validating refresh tokens for JWT authentication.
+ * Entity representing a refresh token used for JWT authentication.
+ * <p>
+ * Each refresh token is associated with a user and has an expiration time.
+ * Tokens can be revoked to invalidate them before their expiration.
+ * </p>
+ * <p>
+ * This entity supports database indexing on the token value for fast lookup
+ * and on the user for query optimization.
+ * </p>
  */
 @Entity
 @NoArgsConstructor
 @Getter
 @Setter
-@Table(name = "Refresh_tokens", indexes = {
+@Table(
+    name = "Refresh_tokens",
+    indexes = {
         @Index(name = "idx_rt_token", columnList = "token", unique = true),
         @Index(name = "idx_rt_user", columnList = "user_id")
-})
+    }
+)
 public class RefreshToken {
 
-    /** Primary key */
+    /** Primary key of the refresh token record */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
-    /** Unique token string (UUID), immutable */
+    /** Unique token string (UUID), immutable once created */
     @Column(nullable = false, unique = true, updatable = false)
     private String token;
 
-    /** The user this refresh token belongs to */
+    /** The user this refresh token is associated with */
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    /** Expiration timestamp */
+    /** Expiration timestamp of the refresh token */
     @Column(nullable = false)
     private Instant expiresAt;
 
@@ -43,10 +53,11 @@ public class RefreshToken {
     private boolean revoked = false;
 
     /**
-     * Constructor generating a new refresh token for a user.
+     * Constructs a new refresh token for a user with a specific expiration date.
+     * The token string is automatically generated as a random UUID.
      *
-     * @param user       the user associated with the token
-     * @param expiresAt  the expiration timestamp
+     * @param user      the user associated with this refresh token
+     * @param expiresAt the timestamp at which the token expires
      */
     public RefreshToken(User user, Instant expiresAt) {
         this.token = UUID.randomUUID().toString();

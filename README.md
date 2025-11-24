@@ -1,26 +1,22 @@
-# portfolio App
-
-A full-stack portfolio project using:
-**Backend:** Java 17, Spring Boot
-**Frontend:** Angular 19 (standalone components)
-**Database:** PostgreSQL
-**Methodology:** Test-Driven Development, Agile
-**Version Control:** Git (feature-branch workflow)
+# Access management demo Api
 
 ## Project Purpose
-Demonstrate the ability to design, develop, test, and document a complete application for job postings and applications.
+Demonstrate through a simple, authentication via credentials, authorization by JWT token with refresh token and access role based. Exposes secured REST endpoints
+and documented with OpenApi
+**Methodology:** Test-Driven Development (TDD) for one feature
+**Version Control:** Git (feature-branch workflow)
 
 ## Technologies
 Java 17
-Spring Boot
-Angular 19
-PostgreSQL
+Maven 3.9
+Git 2.49
+Spring Boot 3.5.4
+PostgreSQL 17
 JUnit 5
-Jasmine/Karma
 
 ## Development Workflow
 Create feature branch
-Writing one feature in TDD
+Writing one feature with TDD
 Commit frequently with meaningful messages
 Push branch and create Pull Request (PR)
 Merge into `dev` after review
@@ -32,12 +28,11 @@ dev → integration branch
 feature/* → individual tasks
 
 ## Requirements
-JDK 17
-Git 
-Node.js 20+
-Angular CLI 15+
+java 17
+Git 2.49
 Maven 3.9+
-PostgreSQL 15+
+PostgreSQL 17 / H2(in-memory) for tests
+Postman / Swagger UI via http://localhost:8080/swagger-ui/index.html
 
 ## Setup Instructions
  ### 1. clone repository
@@ -46,42 +41,116 @@ PostgreSQL 15+
  ### 2. configure database
  install PostgreSQL (runtime), H2(tests)
  create database
- configure credentials in backend/src/main/resources/application.properties
+ configure in backend/src/main/resources/application.properties or in environment
+   spring.application.name=backend
+   spring.datasource.url=jdbc:postgresql://localhost:5432/ yourdb
+   spring.datasource.username= youruser
+   spring.datasource.password= yourpass
+   spring.jpa.hibernate.ddl-auto=update
+   
+   spring.jpa.defer-datasource-initialization=true
+   spring.sql.init.mode=always
+   spring.jpa.properties.hibernate.format_sql=true
+   
+   jwt.secret = yourmostcomplexeandlongsecretforjwt
+   jwt.expiration = 3600000
+   refresh.expiration-days= 2
+   security.cookie.domain=localhost
+   security.cookie.secure=false  
+ 
+ configure in backend/src/main/resources/application-test.properties
+   spring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+   spring.datasource.driver-class-name=org.h2.Driver
+   spring.datasource.username=sa
+   spring.datasource.password=
+   spring.sql.init.mode=never
+   spring.jpa.hibernate.ddl-auto=create-drop
+   spring.jpa.show-sql=true
+   spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect
 
- ### 3. backend
+ ### 3. Run
  cd backend
- mvn clean install
- - Run tests: mvn test
- - Run app: mvn spring-boot:run
+ ./mvnw spring-boot:run for Linux/macOS or mvn spring-boot:run for Windows (if maven is installed, otherwise mvn.cmd)
 
- ### 4. frontend
- cd../frontend
- npm install
+ ## API Documentation
 
-## Features
-User CRUD (create, read, update, delete)
-Authentication and authorization with JWT(access + refresh token)
-Role-Based security (ADMIN, USER)
-Password hashing with BCrypt
-Pagination and sorting for GET /users
-Search and filtering by username/role
-Method-level security (@PreAuthorize)
+ ### Swagger UI
+ http://localhost:8080/swagger-ui/index.html
 
-## API Endpoints
-### Auth
- POST /auth/register to register new user
- POST /auth/login  to authenticate, get JWT tokens
- POST /auth/refresh to refresh access token
+ ### OpenAPI JSON
+ http://localhost:8080/v3/api-docs
 
-### Users(secured)
- GET /users?page=0&suze=5&sort=username, asc to list users with pagination
- GET/users/{id} to get user by ID
- POST/users to create user (ADMIN only)
- PUT/users/{id} to update user (ADMIN or owner)
- DELETE/users/{id} to delete user
- GET/users/search?username=yann&role=USER to search/filter users
+ ## Main Endpoints
+ 
+ | Méthode | Endpoint             | Description                    | Rôle        |   requirements                                |
+| ------- | --------------------- | ------------------------------ | ----------- | ---------------------------------------------
+| GET     | `/users`              |         List all users         | ADMIN/USER  |                                               |
+| POST    | `/users`              |         Create new user        | ADMIN       | uername, password, email,role, status         |
+| GET     | `/users/{id}`         |         Find a user            | ADMIN       | user id                                       |
+| PUT     | `/users/{username}`   |         Update a user          | ADMIN/USER  | username and body(attributs except username)  |
+| DELETE  | `/users/{id}`         |         Delete a user          | ADMIN       | user id                                       |
+| GET     | `/users/search`       | Recherche des utilisateurs avec pagination | ADMIN |`query` (username/role), `page`, `size` |
 
- ## Testing
-  UserServiceTest for Business logic tests
-  UserRepositoryTest for repository queries
-  UserControllerTest, UserControllerIT, AuthControllerIT for API layer tests
+### Paginated User Search
+Endpoint to search for users by a **keyword** (`username` or `role`) and retrieve results **page by page**.
+
+**Parameters:**
+- `query` (required): keyword to search for
+- `page` (optional): page number (default = 0)
+- `size` (optional): number of results per page (default = 10)
+
+**Example curl:**
+curl -X GET "http://localhost:8080/users/search?query=john&page=0&size=5" \
+  -H "Authorization: Bearer <your_jwt_token>"
+
+
+## Authentication / refresh
+
+| Méthode | Endpoint          | Description                                                      |   requirements                        |
+| ------- | ----------------- | ---------------------------------------------------------------- | -------------------------------------
+| POST    |   `/auth/login`   |                Authenticate a user and return a JWT              | username, password
+| POST    | `/auth/refresh`   | Refresh jwt(expired) with a refreh token a user and return a JWT | expired jwt and cookie(refresh token)
+
+
+## sample requests
+### create a user (curl)
+curl -X POST http://localhost:8080/users \
+  -H "Content-Type: application/json" \
+  -d '{"username":"john","password":"pass123","email":"john@example.com","role":"USER","status":"ACTIVE"}'
+
+###Authenticatio(get a jwt)
+ curl -X POST http://localhost:8080/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"John","password":"pass123"}'
+
+### Access a secured endpoint with jwt
+curl -X GET http://localhost:8080/users \
+  -H "Authorization: Bearer <your_token_jwt>"
+
+## Advanced Security / Roles
+The API manages Roles and Permissions (e.g., ADMIN, USER).
+Sensitive endpoints (such as user creation or deletion) are restricted to ADMIN users only.
+To test with different roles:
+Create users with role: USER or role: ADMIN.
+Authenticate each user to obtain the corresponding token.
+Include the token in the request header: Authorization: Bearer <token>.
+
+### Example of a restricted endpoint:
+DELETE /users/{id} → accessible only by an ADMIN user.
+GET /users/mail/{email } → accessible only by an ADMIN user.
+
+## Tests
+Run unit and integration tests:
+./mvnw test  for Linux/macOS or mvn test for Windows (if maven is installed, otherwise mvn.cmd)
+./mvnw verify for Linux/macOS or mvn test for Windows (if maven is installed, otherwise mvn.cmd)
+
+## Contribution
+1. Fork the project.
+2. Create a branch: git checkout -b feature/my-feature
+3. Commit your changes: git commit -m "Add a new feature"
+4. Push to your branch: git push origin feature/my-feature
+5. Open a Pull Request against the main repository.
+
+## License
+
+MIT License – see file [LICENSE](LICENSE)

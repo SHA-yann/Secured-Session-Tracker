@@ -16,16 +16,23 @@ import lombok.*;
 
 /**
  * Entity representing an application user.
- * Includes fields for authentication, role, timestamps, and refresh tokens.
+ * <p>
+ * This entity is used for authentication, authorization, and user management.
+ * Includes information such as username, email, password, role, status, timestamps, and associated refresh tokens.
+ * Implements {@link UserDetails} for Spring Security integration.
+ * </p>
  */
 @Entity
 @NoArgsConstructor
-@Table(name = "users", indexes = {
+@Table(
+    name = "users",
+    indexes = {
         @Index(name = "idx_user_email", columnList = "email", unique = true)
-})
+    }
+)
 @Getter
 @Setter
-public class User implements UserDetails{
+public class User implements UserDetails {
 
     /** Primary key */
     @Id
@@ -51,7 +58,7 @@ public class User implements UserDetails{
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private Role role;
-    
+
     /** Status of the user (e.g., ACTIVE, INACTIVE), stored as string */
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
@@ -64,12 +71,12 @@ public class User implements UserDetails{
     /** Timestamp of last update */
     @Column(nullable = false)
     private Instant updatedAt;
-    
-    /** Timestamp who created the user, immutable */
+
+    /** Identifier of who created the user, immutable */
     @Column(nullable = false, updatable = false)
     private String createdBy;
 
-    /** Timestamp of who did last update */
+    /** Identifier of who last updated the user */
     @Column(nullable = false)
     private String updatedBy;
 
@@ -79,15 +86,16 @@ public class User implements UserDetails{
 
     /**
      * Automatically sets creation and update timestamps before persisting.
+     * Also defaults the status to ACTIVE if not set.
      */
     @PrePersist
     void onCreate() {
         Instant now = Instant.now();
         createdAt = now;
         updatedAt = now;
-        if(this.status==null)
-        	this.status=Status.ACTIVE;
-        	
+        if (this.status == null) {
+            this.status = Status.ACTIVE;
+        }
     }
 
     /**
@@ -101,18 +109,26 @@ public class User implements UserDetails{
     /**
      * Constructor for creating a new user with mandatory fields.
      *
-     * @param username username
-     * @param email    user email
-     * @param password user password
+     * @param username username of the user
+     * @param password password of the user
+     * @param email    email of the user
+     * @param role     role of the user
+     * @param status   account status (ACTIVE or INACTIVE)
      */
-    public User(@NotBlank String username,@NotBlank String password, @Email String email, Role role,Status status) {
-    	this.username = username;
+    public User(@NotBlank String username,
+                @NotBlank String password,
+                @Email String email,
+                Role role,
+                Status status) {
+        this.username = username;
         this.password = password;
         this.email = email;
         this.role = role;
         this.status = status;
     }
-    
+
+    /*------------------------ UserDetails interface ------------------------*/
+
     @Override
     public boolean isAccountNonExpired() {
         return status == Status.ACTIVE;
@@ -133,9 +149,8 @@ public class User implements UserDetails{
         return status == Status.ACTIVE;
     }
 
-	@Override
-	public Collection<? extends GrantedAuthority> getAuthorities() {
-
-		return List.of(new SimpleGrantedAuthority("ROLE_" + this.getRole().name()));
-	}
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return List.of(new SimpleGrantedAuthority("ROLE_" + this.getRole().name()));
+    }
 }

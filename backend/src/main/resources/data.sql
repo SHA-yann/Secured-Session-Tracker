@@ -3,11 +3,11 @@ INSERT INTO users (id, created_at, created_by, email, password, role, status, up
     ON CONFLICT (email) DO NOTHING;
 
 INSERT INTO users (id, created_at, created_by, email, password, role, status, updated_at, updated_by, username)
-    VALUES (2, NOW(), 'David', 'bob@example.com', '$2b$12$RbvxALl4QRkCNogzsHWUHuvYp0pyaqEGHPD.omwyR1DbmJlPd74fi', 'USER', 'ACTIVE', NOW(), 'Yann', 'bob')
+    VALUES (2, NOW(), 'David', 'bob@example.com', '$2b$12$RbvxALl4QRkCNogzsHWUHuvYp0pyaqEGHPD.omwyR1DbmJlPd74fi', 'USER', 'ACTIVE', NOW(), 'Yann', 'Bob')
     ON CONFLICT (email) DO NOTHING;
 
 INSERT INTO users (id, created_at, created_by, email, password, role, status, updated_at, updated_by, username)
-    VALUES (3, NOW(), 'Yann', 'charlie@example.com', '$2b$12$RbvxALl4QRkCNogzsHWUHuvYp0pyaqEGHPD.omwyR1DbmJlPd74fi', 'USER', 'INACTIVE', NOW(), 'David', 'charlie')
+    VALUES (3, NOW(), 'Yann', 'charlie@example.com', '$2b$12$RbvxALl4QRkCNogzsHWUHuvYp0pyaqEGHPD.omwyR1DbmJlPd74fi', 'USER', 'INACTIVE', NOW(), 'David', 'Charlie')
     ON CONFLICT (email) DO NOTHING;
 
 INSERT INTO users (id, created_at, created_by, email, password, role, status, updated_at, updated_by, username)
@@ -15,5 +15,8 @@ INSERT INTO users (id, created_at, created_by, email, password, role, status, up
     ON CONFLICT (email) DO NOTHING;
 
 INSERT INTO users (id, created_at, created_by, email, password, role, status, updated_at, updated_by, username)
-    VALUES (5, NOW(), 'Yann', 'emma@example.com', '$2b$12$RbvxALl4QRkCNogzsHWUHuvYp0pyaqEGHPD.omwyR1DbmJlPd74fi', 'USER', 'ACTIVE', NOW(), 'David', 'emma')
+    VALUES (5, NOW(), 'Yann', 'emma@example.com', '$2b$12$RbvxALl4QRkCNogzsHWUHuvYp0pyaqEGHPD.omwyR1DbmJlPd74fi', 'USER', 'ACTIVE', NOW(), 'David', 'Emma')
     ON CONFLICT (email) DO NOTHING;
+
+-- Mettre la séquence à jour pour qu'elle continue après le max actuel
+SELECT setval('users_id_seq', (SELECT MAX(id) FROM users));
