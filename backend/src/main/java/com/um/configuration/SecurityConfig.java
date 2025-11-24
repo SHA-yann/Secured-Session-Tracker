@@ -21,7 +21,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import com.um.model.Role;
 import com.um.service.MyUserDetailsService;
 
 /**
@@ -78,11 +77,11 @@ public class SecurityConfig {
             .cors(Customizer.withDefaults())
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/login", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/users").permitAll()
-                .requestMatchers(HttpMethod.GET, "/users/**").hasAnyRole(Role.ADMIN.name(), Role.USER.name())
-                .requestMatchers(HttpMethod.PUT, "/users/**").hasRole(Role.ADMIN.name())
-                .requestMatchers(HttpMethod.DELETE, "/users/**").hasRole(Role.ADMIN.name())
+                .requestMatchers("/auth/login","/auth/refresh","/swagger-ui/**","/swagger-ressources/**", "/v3/api-docs/**","/webjars/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/users").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/users/**").hasAnyRole("ADMIN","USER")
+                .requestMatchers(HttpMethod.PUT, "/users/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/users/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -105,7 +104,7 @@ public class SecurityConfig {
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:4200"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
 

@@ -12,8 +12,8 @@ import org.springframework.stereotype.Service;
 
 import com.um.configuration.CookieProvider;
 import com.um.configuration.JwtProvider;
-import com.um.controller.AuthRequest;
-import com.um.controller.AuthResponse;
+import com.um.DTOs.AuthRequest;
+import com.um.DTOs.AuthResponse;
 import com.um.model.RefreshToken;
 import com.um.model.User;
 
@@ -52,7 +52,7 @@ public class AuthService {
         this.myUserDetailsService = myUserDetailsService;
         this.refreshTokenService = refreshTokenService;
     }
-
+    
     /**
      * Authenticates a user and issues an access token and refresh token cookie.
      *

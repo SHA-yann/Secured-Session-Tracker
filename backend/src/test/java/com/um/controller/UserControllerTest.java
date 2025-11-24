@@ -1,4 +1,4 @@
-package com.tm.controller;
+package com.um.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -40,10 +40,11 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.um.DTOs.UserRequest;
 import com.um.Exceptions.UserNotFoundException;
 import com.um.configuration.JwtAuthFilter;
-import com.um.controller.UserController;
 import com.um.model.Role;
+import com.um.model.Status;
 import com.um.model.User;
 import com.um.service.UserService;
 
@@ -69,10 +70,12 @@ class UserControllerTest {
 	
 	@BeforeEach
 	void init() {
-		u=new User("Yann","yannsteve@ymail.fr","secure_123");
-		u.setRole(Role.ADMIN);
-		u1=new User("john","john@free.fr","secure_123");
-		u1.setRole(Role.USER);
+		u= new User("Yann","secure_123", "yannsteve@ymail.fr",Role.ADMIN,Status.ACTIVE);
+		u.setCreatedBy("Yann");
+        u.setUpdatedBy("Red");
+		u1= new User("John","secure_123","john@free.fr",Role.USER,Status.INACTIVE);
+		u1.setCreatedBy("Yann");
+        u1.setUpdatedBy("Rog");
 		pageable=PageRequest.of(0, 10);
 		
 		List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_ADMIN"));
@@ -84,18 +87,18 @@ class UserControllerTest {
 	@Test
 	void shouldCreateUser() throws Exception {
 		
-		Mockito.when(userService.createUser(Mockito.any(User.class))).thenReturn(u);
+		Mockito.when(userService.createUser(Mockito.any(UserRequest.class), Mockito.eq("Yann"))).thenReturn(u);
 		
 		mockMvc.perform(post("/users")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(u)))
 				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.username").value("Yann"))
+				.andExpect(jsonPath("$.createdBy").value("Yann"))
 				.andExpect(jsonPath("$.email").value("yannsteve@ymail.fr"))
 				.andExpect(jsonPath("$.password").doesNotExist())
-				.andExpect(jsonPath("$.role").value(Role.ADMIN.name()));
+				.andExpect(jsonPath("$.status").value(Status.ACTIVE.name()));
 		
-		verify(userService, times(1)).createUser(any(User.class));
+		verify(userService, times(1)).createUser(any(UserRequest.class), eq("Yann"));
 	}
 	
 	@Test
@@ -108,7 +111,7 @@ class UserControllerTest {
 				.with(user("Yann").roles("ADMIN"))
 				.contentType(MediaType.APPLICATION_JSON))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.content[1].username").value("john"))
+				.andExpect(jsonPath("$.content[1].username").value("John"))
 				.andExpect(jsonPath("$.content[1].password").doesNotExist())
 				.andExpect(jsonPath("$.content[0].role").value(Role.ADMIN.name()));
 	}
@@ -167,7 +170,7 @@ class UserControllerTest {
 		mockMvc.perform(get("/users/mail/{email}", "john@free.fr")
 				.with(user("Yann").roles("ADMIN")))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.username").value("john"))
+				.andExpect(jsonPath("$.username").value("John"))
 				.andExpect(jsonPath("$.password").doesNotExist());
 		
 		verify(userService, times(1)).getUserByEmail("john@free.fr");
@@ -188,24 +191,24 @@ class UserControllerTest {
 	@Test
 	void test_UpdateUser_found() throws Exception{
 		
-		when(userService.updateUser(eq(1L),any(User.class))).thenReturn(Optional.of(u1));
+		when(userService.updateUser(any(String.class),any(UserRequest.class),any(String.class))).thenReturn(Optional.of(u));
 		
-		mockMvc.perform(put("/users/1")
+		mockMvc.perform(put("/users/Yann")
 				.with(user("Yann").roles("ADMIN"))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(u)))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.username").value("john"))
+				.andExpect(jsonPath("$.username").value("Yann"))
 				.andExpect(jsonPath("$.password").doesNotExist())
-				.andExpect(jsonPath("$.role").value(Role.USER.name()));
+				.andExpect(jsonPath("$.role").value(Role.ADMIN.name()));
 		
-		verify(userService, times(1)).updateUser(eq(1L),any(User.class));
+		verify(userService, times(1)).updateUser(any(String.class),any(UserRequest.class),any(String.class));
 	}
 	
 	@Test
 	void test_UpdateUser_notFound() throws Exception{
 	
-		when(userService.updateUser(eq(99L),any(User.class))).thenReturn(Optional.empty());
+		when(userService.updateUser(any(String.class),any(UserRequest.class),any(String.class))).thenReturn(Optional.empty());
 		
 		mockMvc.perform(put("/users/99")
 				.with(user("Yann").roles("ADMIN"))
@@ -213,7 +216,7 @@ class UserControllerTest {
 				.content(objectMapper.writeValueAsString(u1)))
 				.andExpect(status().isNotFound());
 		
-		verify(userService, times(1)).updateUser(eq(99L),any(User.class));
+		verify(userService, times(1)).updateUser(any(String.class),any(UserRequest.class),any(String.class));
 	}
 	
 	@Test

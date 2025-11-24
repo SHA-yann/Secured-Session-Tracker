@@ -1,4 +1,4 @@
-package com.um.controller;
+package com.um.DTOs;
 
 import jakarta.servlet.http.Cookie;
 import lombok.AllArgsConstructor;

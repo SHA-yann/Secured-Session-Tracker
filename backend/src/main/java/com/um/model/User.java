@@ -2,7 +2,12 @@ package com.um.model;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
@@ -20,12 +25,12 @@ import lombok.*;
 })
 @Getter
 @Setter
-public class User {
+public class User implements UserDetails{
 
     /** Primary key */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long Id;
+    private Long Id;
 
     /** Username, required, max length 20 */
     @NotBlank
@@ -46,6 +51,11 @@ public class User {
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private Role role;
+    
+    /** Status of the user (e.g., ACTIVE, INACTIVE), stored as string */
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    private Status status;
 
     /** Timestamp when the user was created, immutable */
     @Column(nullable = false, updatable = false)
@@ -54,6 +64,14 @@ public class User {
     /** Timestamp of last update */
     @Column(nullable = false)
     private Instant updatedAt;
+    
+    /** Timestamp who created the user, immutable */
+    @Column(nullable = false, updatable = false)
+    private String createdBy;
+
+    /** Timestamp of who did last update */
+    @Column(nullable = false)
+    private String updatedBy;
 
     /** List of refresh tokens associated with the user */
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -67,6 +85,9 @@ public class User {
         Instant now = Instant.now();
         createdAt = now;
         updatedAt = now;
+        if(this.status==null)
+        	this.status=Status.ACTIVE;
+        	
     }
 
     /**
@@ -84,9 +105,37 @@ public class User {
      * @param email    user email
      * @param password user password
      */
-    public User(@NotBlank String username, @Email String email, @NotBlank String password) {
-        this.username = username;
-        this.email = email;
+    public User(@NotBlank String username,@NotBlank String password, @Email String email, Role role,Status status) {
+    	this.username = username;
         this.password = password;
+        this.email = email;
+        this.role = role;
+        this.status = status;
     }
+    
+    @Override
+    public boolean isAccountNonExpired() {
+        return status == Status.ACTIVE;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return status == Status.ACTIVE;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return status == Status.ACTIVE;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return status == Status.ACTIVE;
+    }
+
+	@Override
+	public Collection<? extends GrantedAuthority> getAuthorities() {
+
+		return List.of(new SimpleGrantedAuthority("ROLE_" + this.getRole().name()));
+	}
 }

@@ -1,11 +1,9 @@
-package com.tm.controller;
+package com.um.controller;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,41 +11,46 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.jayway.jsonpath.JsonPath;
+import com.um.model.Role;
+import com.um.model.Status;
 import com.um.model.User;
-import com.um.service.UserService;
-
+import com.um.repository.UserRepository;
 import jakarta.transaction.Transactional;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
+@ActiveProfiles("test")
 class AuthControllerIT {
 
     @Autowired
     private MockMvc mockMvc;
+    
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private UserService userService;
-
+    private UserRepository userRepository;
+    
     @BeforeEach
     void init() {
         // Clean database before each test
-        userService.wipeAll();
+    	userRepository.deleteAll();
 
         // Create a test user and set authentication context
-        User user = new User("Yann", "yannsteve@gmail.com", "plainPassword123");
-        List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_ADMIN"));
-        Authentication auth = new UsernamePasswordAuthenticationToken("Yann", "plainPassword123", authorities);
-        SecurityContextHolder.getContext().setAuthentication(auth);
-
-        userService.createUser(user);
+        User user = new User("Yann",passwordEncoder.encode("password123")
+        		,"yannsteve@gmail.com",Role.ADMIN,Status.ACTIVE);
+        user.setCreatedBy("System");
+        user.setUpdatedBy("David");
+        userRepository.save(user);
+        
+        
+        
     }
 
     // -------------------- LOGIN --------------------
@@ -55,8 +58,9 @@ class AuthControllerIT {
     void shouldReturnAccessToken_AndRefreshCookie() throws Exception {
         // Test login endpoint returns JWT access token and HttpOnly refresh cookie
         mockMvc.perform(post("/auth/login")
+        		//.header("Authorization", authHeader)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"Yann\",\"password\":\"plainPassword123\"}"))
+                .content("{\"username\":\"Yann\",\"password\":\"password123\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").exists())
                 .andExpect(cookie().exists("refresh_token"))
@@ -68,16 +72,16 @@ class AuthControllerIT {
     void refresh_should_rotate_and_issueNewToken() throws Exception {
         // Perform login to get refresh token cookie
         var loginResult = mockMvc.perform(post("/auth/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"Yann\",\"password\":\"plainPassword123\"}"))
+        		.contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"Yann\",\"password\":\"password123\"}"))
                 .andExpect(status().isOk())
                 .andReturn();
 
-        var refreshCookie = loginResult.getResponse().getCookie("refresh_token");
+        var refreshCookie = loginResult.getResponse()   .getCookie("refresh_token");
 
         // Use refresh endpoint to get new access token and rotated refresh cookie
         mockMvc.perform(post("/auth/refresh")
-                .cookie(refreshCookie))
+        		.cookie(refreshCookie))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").exists())
                 .andExpect(cookie().exists("refresh_token"));
@@ -88,16 +92,19 @@ class AuthControllerIT {
     void logout_shouldClear_refreshCookie() throws Exception {
         // Perform login to get refresh token cookie
         var loginResult = mockMvc.perform(post("/auth/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"Yann\",\"password\":\"plainPassword123\"}"))
+        		.contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"Yann\",\"password\":\"password123\"}"))
                 .andExpect(status().isOk())
                 .andReturn();
 
+        var json=loginResult.getResponse().getContentAsString();
+        var accessToken= JsonPath.read(json, "$.accessToken");
         var refreshCookie = loginResult.getResponse().getCookie("refresh_token");
 
         // Call logout and validate that refresh cookie is cleared
         mockMvc.perform(post("/auth/logout")
-                .contentType(MediaType.APPLICATION_JSON)
+        		.header("Authorization", "Bearer "+accessToken)
+        		.contentType(MediaType.APPLICATION_JSON)
                 .content("{\"username\":\"Yann\"}")
                 .cookie(refreshCookie))
                 .andExpect(status().isNoContent())

@@ -7,9 +7,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import com.um.DTOs.UserRequest;
+import com.um.DTOs.UserResponse;
 import com.um.model.Role;
 import com.um.model.User;
 import com.um.service.UserService;
@@ -45,15 +48,32 @@ public class UserController {
      * @param user the user to create
      * @return a response containing the created user and the location URI
      */
+    
     @PostMapping("/users")
-    public ResponseEntity<?> register(@RequestBody User user) {
-        UserToAdmin created = UserToAdmin.fromEntity(userService.createUser(user));
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> register(@RequestBody UserRequest user) {
+    	
+    	String author = SecurityContextHolder.getContext().getAuthentication().getName();
+        User created = userService.createUser(user,author);
+        
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
                 .buildAndExpand(created.getId())
                 .toUri();
 
-        return ResponseEntity.created(location).body(created);
+        return ResponseEntity.created(location).body(
+        		new UserResponse(
+        			created.getId(),
+        			created.getUsername(),
+        			created.getEmail(),
+        			created.getRole(),
+        			created.getStatus(),
+        			created.getCreatedAt(),
+        			created.getCreatedBy(),
+        			created.getUpdatedAt(),
+        			created.getUpdatedBy()
+        				)
+        		);
     }
 
     /**
@@ -64,12 +84,12 @@ public class UserController {
      * @return a page of users
      */
     @GetMapping("/users")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
     @Operation(security=@SecurityRequirement(name = "bearerAuth"))
-    public ResponseEntity<Page<UserToAdmin>> getAllUsers(
+    public ResponseEntity<Page<UserResponse>> getAllUsers(
             @PageableDefault(size = 10, sort = "username") Pageable pageable) {
         Page<User> users = userService.getAllUsers(pageable);
-        Page<UserToAdmin> dtoPage = users.map(UserToAdmin::fromEntity);
+        Page<UserResponse> dtoPage = users.map(UserResponse::fromEntity);
         return ResponseEntity.ok(dtoPage);
     }
 
@@ -81,11 +101,11 @@ public class UserController {
      * @return the user if found, otherwise 404
      */
     @GetMapping("/users/{id}")
-    @PreAuthorize("hasRole('ADMIN') or #id==principal.id")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(security=@SecurityRequirement(name = "bearerAuth"))
-    public ResponseEntity<UserToAdmin> getUserById(@PathVariable Long id) {
+    public ResponseEntity<UserResponse> getUserById(@PathVariable Long id) {
         return userService.getUserById(id)
-                .map(UserToAdmin::fromEntity)
+                .map(UserResponse::fromEntity)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -98,11 +118,11 @@ public class UserController {
      * @return the user if found, otherwise 404
      */
     @GetMapping("/users/mail/{email}")
-    @PreAuthorize("hasRole('ADMIN') or #id==principal.id")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(security=@SecurityRequirement(name = "bearerAuth"))
-    public ResponseEntity<UserToAdmin> getUserByEmail(@PathVariable String email) {
+    public ResponseEntity<UserResponse> getUserByEmail(@PathVariable String email) {
         return userService.getUserByEmail(email)
-                .map(UserToAdmin::fromEntity)
+                .map(UserResponse::fromEntity)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -115,12 +135,14 @@ public class UserController {
      * @param user the updated user data
      * @return the updated user if found, otherwise 404
      */
-    @PutMapping("/users/{id}")
-    @PreAuthorize("hasRole('ADMIN') or #id==principal.id")
+    @PutMapping("/users/{username}")
+    @PreAuthorize("hasRole('ADMIN') or #username==principal.username")
     @Operation(security=@SecurityRequirement(name = "bearerAuth"))
-    public ResponseEntity<UserToAdmin> updateUser(@PathVariable Long id, @RequestBody User user) {
-        return userService.updateUser(id, user)
-                .map(UserToAdmin::fromEntity)
+    public ResponseEntity<UserResponse> updateUser(@PathVariable String username, @RequestBody UserRequest user) {
+        
+    	String author = SecurityContextHolder.getContext().getAuthentication().getName();
+    	return userService.updateUser(username, user,author)
+                .map(UserResponse::fromEntity)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -149,15 +171,15 @@ public class UserController {
      * @param pageable pagination information
      * @return a page of matching users
      */
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
     @Operation(security=@SecurityRequirement(name = "bearerAuth"))
-    public ResponseEntity<Page<UserToAdmin>> searchUsers(
+    public ResponseEntity<Page<UserResponse>> searchUsers(
             @RequestParam(required = false) String username,
             @RequestParam(required = false) Role role,
             Pageable pageable) {
 
         Page<User> users = userService.searchUsers(username, role, pageable);
-        Page<UserToAdmin> dtoPage = users.map(UserToAdmin::fromEntity);
+        Page<UserResponse> dtoPage = users.map(UserResponse::fromEntity);
 
         return ResponseEntity.ok(dtoPage);
     }

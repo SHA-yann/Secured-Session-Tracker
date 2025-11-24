@@ -58,29 +58,30 @@ PostgreSQL 15+
  cd../frontend
  npm install
 
-## Feature register-user:POST (TDD)  on branch feature/register-user
-- UserServiceTest tests the creation of a user
-- UserRepositoryTest tests the persistence of a user in the db
-- UserControllerTest tests registration of a user via the REST API 
-- implementing User, UserController, UserService, UserRepository
+## Features
+User CRUD (create, read, update, delete)
+Authentication and authorization with JWT(access + refresh token)
+Role-Based security (ADMIN, USER)
+Password hashing with BCrypt
+Pagination and sorting for GET /users
+Search and filtering by username/role
+Method-level security (@PreAuthorize)
 
-## Feature search-user:GET (Agile)  on branch feature/search-user
-- getting Allusers, finding a user by Id, or by mail
-- implementing all GET methods from controller to repository layer(if needed) with tests
+## API Endpoints
+### Auth
+ POST /auth/register to register new user
+ POST /auth/login  to authenticate, get JWT tokens
+ POST /auth/refresh to refresh access token
 
-## Feature update-user:PUT (Agile) on branch feature/update-user
-- implementing on the service layer and tests
-- implementing on the controller layer and tests
+### Users(secured)
+ GET /users?page=0&suze=5&sort=username, asc to list users with pagination
+ GET/users/{id} to get user by ID
+ POST/users to create user (ADMIN only)
+ PUT/users/{id} to update user (ADMIN or owner)
+ DELETE/users/{id} to delete user
+ GET/users/search?username=yann&role=USER to search/filter users
 
-## Feature delete-user:DELETE (Agile) on branch feature/delete-user
-- implementing on the service layer and tests
-- implementing on the controller layer and tests
-
-Integration Test UserControllerIT to validate all the feautures through the API
-
-## Integrating spring security with jwt to secure endpoinds
-- adding JwtProvider: to generate jwt
-- setting authentication filter
-- configuring security: registering filter to spring security
-- adding DTOs for authentication
-- adding controller for authentication
+ ## Testing
+  UserServiceTest for Business logic tests
+  UserRepositoryTest for repository queries
+  UserControllerTest, UserControllerIT, AuthControllerIT for API layer tests

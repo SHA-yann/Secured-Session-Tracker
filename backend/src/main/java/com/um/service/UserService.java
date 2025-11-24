@@ -7,13 +7,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.um.DTOs.UserRequest;
 import com.um.Exceptions.*;
-import com.um.controller.UserToAdmin;
 import com.um.model.Role;
 import com.um.model.User;
 import com.um.repository.UserRepository;
@@ -47,13 +46,21 @@ public class UserService {
      * @throws UserAlreadyExistsException if username is already taken
      */
     @Transactional
-    public User createUser(User user) {
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
-        user.setRole(Role.USER);
-
-        if (userRepository.existsByUsername(user.getUsername())) {
-            throw new UserAlreadyExistsException("Username " + user.getUsername() + " already taken");
+    @PreAuthorize("hasRole('ADMIN')")
+    public User createUser(UserRequest dto, String author) {
+        
+    	if (userRepository.existsByUsername(dto.username())) {
+            throw new UserAlreadyExistsException("Username " + dto.username() + " already taken");
         }
+    	
+    	User user= new User(
+    	dto.username(),
+    	passwordEncoder.encode(dto.password()),
+    	dto.email(),
+    	dto.role(),
+        dto.status());
+        user.setCreatedBy(author);
+        user.setUpdatedBy(author);
 
         return userRepository.save(user);
     }
@@ -64,7 +71,7 @@ public class UserService {
      * @param pageable pagination settings
      * @return page of users
      */
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
     public Page<User> getAllUsers(Pageable pageable) {
         return userRepository.findAll(pageable);
     }
@@ -76,7 +83,7 @@ public class UserService {
      * @return Optional containing the user if found
      * @throws UserNotFoundException if user not found
      */
-    @PreAuthorize("hasRole('ADMIN') or #id==principal.id")
+    @PreAuthorize("hasRole('ADMIN')")
     public Optional<User> getUserById(long id) {
         return Optional.of(userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User with id " + id + " not found")));
@@ -89,7 +96,7 @@ public class UserService {
      * @return Optional containing the user if found
      * @throws UserNotFoundException if user not found
      */
-    @PreAuthorize("hasRole('ADMIN') or #id==principal.id")
+    @PreAuthorize("hasRole('ADMIN')")
     public Optional<User> getUserByEmail(String email) {
         return Optional.of(userRepository.findByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException("User with email " + email + " not found")));
@@ -105,25 +112,27 @@ public class UserService {
      * @throws UserNotFoundException if user not found
      */
     @Transactional
-    @PreAuthorize("hasRole('ADMIN') or #id==principal.id")
-    public Optional<User> updateUser(long id, User update) {
-        return Optional.of(userRepository.findById(id)
+    @PreAuthorize("hasRole('ADMIN') or #username==principal.username")
+    public Optional<User> updateUser(String username, UserRequest update, String author) {
+        return Optional.of(userRepository.findByUsername(username)
                 .map(found -> {
-                    found.setUsername(update.getUsername());
-                    found.setEmail(update.getEmail());
+                    found.setEmail(update.email());
+                    found.setCreatedBy(author);
+                    found.setUpdatedBy(author);
 
                     boolean isAdmin = SecurityContextHolder.getContext().getAuthentication()
                             .getAuthorities()
                             .stream()
                             .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
 
-                    if (isAdmin && update.getRole() != null && !update.getRole().name().isEmpty()) {
-                        found.setRole(update.getRole());
+                    if (isAdmin) {
+                        found.setRole(update.role());
+                        found.setStatus(update.status());
                     }
 
                     return userRepository.save(found);
                 })
-                .orElseThrow(() -> new UserNotFoundException("User with id " + id + " not found")));
+                .orElseThrow(() -> new UserNotFoundException("User with name " + username + " not found")));
     }
 
     /**
@@ -147,7 +156,6 @@ public class UserService {
      * @param username username
      * @return Optional containing the user
      */
-    @PreAuthorize("hasRole('ADMIN')")
     public Optional<User> findByName(String username) {
         return userRepository.findByUsername(username);
     }
@@ -160,7 +168,7 @@ public class UserService {
      * @param pageable pagination settings
      * @return page of users matching filters
      */
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
     public Page<User> searchUsers(String username, Role role, Pageable pageable) {
         if (username != null && !username.isBlank()) {
             return userRepository.findByUsernameContainingIgnoreCase(username, pageable);

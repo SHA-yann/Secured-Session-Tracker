@@ -1,7 +1,10 @@
-package com.tm.controller;
+package com.um.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.um.controller.UserToAdmin;
+import com.um.DTOs.UserRequest;
+import com.um.DTOs.UserResponse;
+import com.um.model.Role;
+import com.um.model.Status;
 import com.um.model.User;
 import com.um.service.UserService;
 
@@ -62,7 +65,7 @@ class UserControllerIT {
      * Full CRUD integration test:
      * 1. CREATE a user
      * 2. READ the user
-     * 3. UPDATE the username
+     * 3. UPDATE emai and role of the user
      * 4. DELETE the user
      * 5. VERIFY user not found after deletion
      */
@@ -70,8 +73,9 @@ class UserControllerIT {
     @WithMockUser(username="admin", roles= {"ADMIN"})
     void testFullCrudFlow() throws Exception {
         // 1. CREATE
-        User user = new User("Yann", "yannsteve@ymail.fr", "secure_123");
-        String userJson = objectMapper.writeValueAsString(user);
+        User user = new User("Yann","secure_123", "yannsteve@ymail.fr",Role.ADMIN,Status.ACTIVE);
+        UserRequest uReq= new UserRequest(user.getUsername(), user.getPassword(), user.getEmail(), user.getRole(), user.getStatus());
+        String userJson = objectMapper.writeValueAsString(uReq);
 
         String response = mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -81,9 +85,9 @@ class UserControllerIT {
                 .getResponse()
                 .getContentAsString();
 
-        UserToAdmin created = objectMapper.readValue(response, UserToAdmin.class);
-        assertNotNull(created.getId());
-        Long userId = created.getId();
+        UserResponse created = objectMapper.readValue(response, UserResponse.class);
+        assertNotNull(created.id());
+        Long userId = created.id();
 
         // 2. READ
         mockMvc.perform(get("/users/" + userId))
@@ -92,14 +96,15 @@ class UserControllerIT {
                 .andExpect(jsonPath("$.email").value("yannsteve@ymail.fr"));
 
         // 3. UPDATE
-        created.setUsername("john");
-        String updatedJson = objectMapper.writeValueAsString(created);
+        UserRequest uUp= new UserRequest("John", user.getPassword(),"john@free.fr" , Role.USER, user.getStatus());
+        String updatedJson = objectMapper.writeValueAsString(uUp);
+        String name=created.username();
 
-        mockMvc.perform(put("/users/" + userId)
+        mockMvc.perform(put("/users/" + name)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(updatedJson))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value("john"));
+                .andExpect(jsonPath("$.email").value("john@free.fr"));
 
         // 4. DELETE
         mockMvc.perform(delete("/users/" + userId)

@@ -8,11 +8,11 @@
 		<version>3.5.4</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.tm</groupId>
+	<groupId>com.um</groupId>
 	<artifactId>backend</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>backend</name>
-	<description>job postings and applications</description>
+	<description>User management application</description>
 	<url/>
 	<licenses>
 		<license/>

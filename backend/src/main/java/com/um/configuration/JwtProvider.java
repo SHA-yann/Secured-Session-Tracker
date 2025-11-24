@@ -5,14 +5,14 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.crypto.SecretKey;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
-
-import com.um.model.Role;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -71,9 +71,9 @@ public class JwtProvider {
      */
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
-        claims.put("roles", userDetails.getAuthorities().stream()
-                .map(auth -> auth.getAuthority())
-                .toList());
+        claims.put("Role", userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.toList()));
         return createToken(claims, userDetails.getUsername());
     }
 
@@ -93,8 +93,8 @@ public class JwtProvider {
      * @param token JWT string
      * @return list of roles
      */
-    public List<Role> extractRole(String token) {
-        return extractAllClaims(token).get("Roles", List.class);
+    public List<String> extractRole(String token) {
+        return extractAllClaims(token).get("Role", List.class);
     }
 
     /**

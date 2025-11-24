@@ -1,4 +1,4 @@
-package com.tm.service;
+package com.um.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
@@ -15,12 +15,12 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import com.um.DTOs.UserRequest;
 import com.um.Exceptions.UserNotFoundException;
 import com.um.model.Role;
+import com.um.model.Status;
 import com.um.model.User;
 import com.um.repository.UserRepository;
-import com.um.service.UserService;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -44,9 +44,9 @@ class UserServiceTest {
         MockitoAnnotations.openMocks(this);
 
         // Initialize test users
-        toSave = new User("Yann", "yannsteve@ymail.fr", "secure_123");
-        u1 = new User("John", "john@free.fr", "secure_123");
-
+        toSave = new User("Yann","secure_123", "yannsteve@ymail.fr",Role.ADMIN,Status.ACTIVE);
+        u1 = new User("John","secure_123","john@free.fr",Role.USER,Status.ACTIVE);
+        
         // Set up pagination for retrieval tests
         pageable = PageRequest.of(0, 2, Sort.by("username").ascending());
 
@@ -63,13 +63,13 @@ class UserServiceTest {
         when(userRepository.save(any(User.class))).thenReturn(toSave);
 
         User result = userRepository.save(toSave);
-        result.setRole(Role.ADMIN);
+        result.setStatus(Status.ACTIVE);
 
         // Validate that the user was saved correctly
         assertNotNull(result);
         assertEquals("Yann", result.getUsername());
         assertEquals("yannsteve@ymail.fr", result.getEmail());
-        assertEquals(Role.ADMIN, result.getRole());
+        assertEquals(Status.ACTIVE, result.getStatus());
 
         // Verify that save was invoked once
         verify(userRepository, times(1)).save(any(User.class));
@@ -79,8 +79,8 @@ class UserServiceTest {
     @Test
     void test_souldreturnAllusers() {
         // Assign roles and create page result
-        toSave.setRole(Role.ADMIN);
-        u1.setRole(Role.USER);
+        toSave.setStatus(Status.ACTIVE);
+        u1.setStatus(Status.INACTIVE);
         Page<User> page = new PageImpl<>(List.of(toSave, u1), pageable, 2);
 
         // Mock repository call
@@ -91,7 +91,8 @@ class UserServiceTest {
         // Verify correct data returned
         assertThat(result.getContent()).hasSize(2);
         assertThat(result.getContent().get(1).getUsername()).isEqualTo("John");
-        assertThat(result.getContent().get(0).getRole()).isEqualTo(Role.ADMIN);
+        assertThat(result.getContent().get(1).getStatus()).isEqualTo(Status.INACTIVE);
+        assertThat(result.getContent().get(0).getStatus()).isEqualTo(Status.ACTIVE);
 
         verify(userRepository, times(1)).findAll(pageable);
     }
@@ -156,20 +157,22 @@ class UserServiceTest {
     // -------------------- UPDATE --------------------
     @Test
     void test_UpdateUser_found() {
-        u1.setRole(Role.USER);
+        u1.setStatus(Status.INACTIVE);
 
         // Mock find and save operations
-        when(userRepository.findById(2L)).thenReturn(Optional.of(toSave));
+        when(userRepository.findByUsername(any(String.class))).thenReturn(Optional.of(toSave));
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Optional<User> result = userService.updateUser(2L, u1);
+        UserRequest uReq= new UserRequest(u1.getUsername(), u1.getPassword(), "frank@wanado.fr", Role.USER, u1.getStatus());
+        Optional<User> result = userService.updateUser("Yann",uReq,"John");
 
         // Validate updated user
         assertThat(result).isNotNull();
-        assertThat(result.get().getUsername()).isEqualTo("John");
-        assertThat(result.get().getRole()).isEqualTo(Role.USER);
+        assertThat(result.get().getEmail()).isEqualTo("frank@wanado.fr");
+        assertThat(result.get().getStatus()).isEqualTo(Status.INACTIVE); // unchanged
+        assertThat(result.get().getUpdatedBy()).isEqualTo("John");
 
-        verify(userRepository, times(1)).findById(2L);
+        verify(userRepository, times(1)).findByUsername(any(String.class));
         verify(userRepository, times(1)).save(toSave);
     }
 
@@ -177,9 +180,10 @@ class UserServiceTest {
     void test_UpdateUser_notFound() {
         when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(UserNotFoundException.class, () -> userService.updateUser(99L, u1));
+        UserRequest uReq= new UserRequest(u1.getUsername(), u1.getPassword(), u1.getEmail(), u1.getRole(), u1.getStatus());
+        assertThrows(UserNotFoundException.class, () -> userService.updateUser("none", uReq,"Yann"));
 
-        verify(userRepository, times(1)).findById(99L);
+        verify(userRepository, times(1)).findByUsername(any(String.class));
         verify(userRepository, never()).save(any(User.class));
     }
 
