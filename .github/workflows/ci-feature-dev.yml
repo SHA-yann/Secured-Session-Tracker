@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [dev, "**/feature/**"]
+  pull_request:
+    branches: [dev, main]
+
+jobs:
+  build:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_DB: taskmanager_db
+          POSTGRES_USER: tmuser
+          POSTGRES_PASSWORD: tmpass
+        options: >-
+          --health-cmd="pg_isready -U tmuser" 
+          --health-interval=10s 
+          --health-timeout=5s 
+          --health-retries=5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          architecture: x64
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Build and test with Maven
+        run: mvn clean verify --batch-mode
+
+      - name: Run Checkstyle
+        run: mvn checkstyle:checkstyle
