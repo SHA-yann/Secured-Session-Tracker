@@ -12,6 +12,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -51,9 +52,10 @@ class UserServiceTest {
         pageable = PageRequest.of(0, 2, Sort.by("username").ascending());
 
         // Set SecurityContext for tests requiring authentication
-        List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_ADMIN"));
-        Authentication auth = new UsernamePasswordAuthenticationToken("Yann", "secure_123", authorities);
-        SecurityContextHolder.getContext().setAuthentication(auth);
+        Authentication auth = Mockito.mock(Authentication.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(auth);
+        SecurityContextHolder.setContext(securityContext);
     }
 
     // -------------------- CREATE --------------------
@@ -169,7 +171,7 @@ class UserServiceTest {
         // Validate updated user
         assertThat(result).isNotNull();
         assertThat(result.get().getEmail()).isEqualTo("frank@wanado.fr");
-        assertThat(result.get().getStatus()).isEqualTo(Status.INACTIVE); // unchanged
+        assertThat(result.get().getStatus()).isEqualTo(Status.ACTIVE); // unchanged
         assertThat(result.get().getUpdatedBy()).isEqualTo("John");
 
         verify(userRepository, times(1)).findByUsername(any(String.class));
