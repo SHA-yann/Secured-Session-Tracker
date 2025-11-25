@@ -40,9 +40,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.um.DTOs.UserRequest;
 import com.um.Exceptions.UserNotFoundException;
 import com.um.configuration.JwtAuthFilter;
+import com.um.dto.UserRequest;
 import com.um.model.Role;
 import com.um.model.Status;
 import com.um.model.User;

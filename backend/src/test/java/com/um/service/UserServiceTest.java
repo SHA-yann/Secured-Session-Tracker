@@ -16,8 +16,8 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import com.um.DTOs.UserRequest;
 import com.um.Exceptions.UserNotFoundException;
+import com.um.dto.UserRequest;
 import com.um.model.Role;
 import com.um.model.Status;
 import com.um.model.User;

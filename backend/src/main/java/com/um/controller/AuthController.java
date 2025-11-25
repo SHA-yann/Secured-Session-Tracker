@@ -12,11 +12,14 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.um.DTOs.AuthRequest;
-import com.um.DTOs.AuthResponse;
+import com.um.dto.AuthRequest;
+import com.um.dto.AuthResponse;
 import com.um.service.AuthService;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -37,58 +40,58 @@ public class AuthController {
 
     private final AuthService authService;
 
-    /**
-     * Creates a new {@code AuthController}.
-     *
-     * @param authService service providing authentication logic
-     */
     public AuthController(AuthService authService) {
         this.authService = authService;
     }
 
-    /**
-     * Authenticates a user with username and password.
-     * <ul>
-     *     <li>Valid credentials → returns JWT access token and sets refresh cookie</li>
-     *     <li>Invalid credentials → returns 401 Unauthorized</li>
-     * </ul>
-     *
-     * @param request  the authentication request containing username and password
-     * @param response the HTTP response, used to add the refresh token cookie
-     * @return 200 OK with access token or 401 Unauthorized if credentials are invalid
-     */
+    @Operation(
+        summary = "Login",
+        description = "Authenticates a user with username and password.\n" +
+                      "Valid credentials → returns JWT access token and sets refresh cookie.\n" +
+                      "Invalid credentials → returns 401 Unauthorized."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Login successful, access token returned"),
+        @ApiResponse(responseCode = "401", description = "Invalid credentials")
+    })
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody AuthRequest request, HttpServletResponse response) {
+    public ResponseEntity<?> login(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                description = "Authentication request containing username and password", required = true
+            )
+            @RequestBody AuthRequest request,
+            @Parameter(hidden = true) HttpServletResponse response) {
+
         try {
             AuthResponse authResponse = authService.login(request);
             response.addCookie(authResponse.getRefreshCookie());
 
-            return ResponseEntity.ok()
-                    .body(Collections.singletonMap("accessToken", authResponse.getAccessToken()));
+            return ResponseEntity.ok(Collections.singletonMap("accessToken", authResponse.getAccessToken()));
         } catch (BadCredentialsException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Credentials");
         }
     }
 
-    /**
-     * Refreshes authentication using a valid refresh token.
-     * <ul>
-     *     <li>Valid refresh token → issues new access token and rotates refresh cookie</li>
-     *     <li>Missing or invalid token → returns 401 Unauthorized</li>
-     * </ul>
-     *
-     * @param request  the HTTP request containing cookies
-     * @param response the HTTP response, used to set the new refresh token cookie
-     * @return 200 OK with new {@link AuthResponse} or 401 Unauthorized
-     */
+    @Operation(
+        summary = "Refresh token",
+        description = "Refreshes authentication using a valid refresh token.\n" +
+                      "Valid refresh token → issues new access token and rotates refresh cookie.\n" +
+                      "Missing or invalid token → returns 401 Unauthorized.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "New access token issued"),
+        @ApiResponse(responseCode = "401", description = "Missing or invalid refresh token")
+    })
     @PostMapping("/refresh")
-    @Operation(security=@SecurityRequirement(name = "bearerAuth"))
-    public ResponseEntity<?> refresh(HttpServletRequest request, HttpServletResponse response) {
+    public ResponseEntity<?> refresh(
+            @Parameter(hidden = true) HttpServletRequest request,
+            @Parameter(hidden = true) HttpServletResponse response) {
+
         AuthResponse authResponse = authService.refresh(request);
 
         if (authResponse == null) {
-            return ResponseEntity
-                    .status(HttpStatus.UNAUTHORIZED)
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body("No cookie to refresh authentication");
         }
 
@@ -96,21 +99,27 @@ public class AuthController {
         return ResponseEntity.ok(authResponse);
     }
 
-    /**
-     * Logs a user out by revoking refresh tokens and clearing the refresh cookie.
-     *
-     * @param req JSON body containing the {@code username} key
-     * @return 204 No Content if successful, 404 Not Found if the user does not exist or is already logged out
-     */
+    @Operation(
+        summary = "Logout",
+        description = "Logs a user out by revoking refresh tokens and clearing the refresh cookie.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "204", description = "Logout successful, refresh cookie cleared"),
+        @ApiResponse(responseCode = "404", description = "User not found or already logged out")
+    })
     @PostMapping("/logout")
-    @Operation(security=@SecurityRequirement(name = "bearerAuth"))
-    public ResponseEntity<?> logout(@RequestBody Map<String, String> req) {
+    public ResponseEntity<?> logout(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                description = "JSON body containing the username key", required = true
+            )
+            @RequestBody Map<String, String> req) {
+
         String username = req.get("username");
         boolean success = authService.logout(username);
 
         if (!success) {
-            return ResponseEntity
-                    .status(HttpStatus.NOT_FOUND)
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body("User not found or already logged out");
         }
 
@@ -120,3 +129,4 @@ public class AuthController {
                 .build();
     }
 }
+

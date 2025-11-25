@@ -1,8 +1,8 @@
 package com.um.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.um.DTOs.UserRequest;
-import com.um.DTOs.UserResponse;
+import com.um.dto.UserRequest;
+import com.um.dto.UserResponse;
 import com.um.model.Role;
 import com.um.model.Status;
 import com.um.model.User;

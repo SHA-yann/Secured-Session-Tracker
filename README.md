@@ -40,33 +40,7 @@ Postman / Swagger UI via http://localhost:8080/swagger-ui/index.html
  cd taskmanager
  ### 2. configure database
  install PostgreSQL (runtime), H2(tests)
- create database
- configure in backend/src/main/resources/application.properties or in environment
-   spring.application.name=backend
-   spring.datasource.url=jdbc:postgresql://localhost:5432/ yourdb
-   spring.datasource.username= youruser
-   spring.datasource.password= yourpass
-   spring.jpa.hibernate.ddl-auto=update
-   
-   spring.jpa.defer-datasource-initialization=true
-   spring.sql.init.mode=always
-   spring.jpa.properties.hibernate.format_sql=true
-   
-   jwt.secret = yourmostcomplexeandlongsecretforjwt
-   jwt.expiration = 3600000
-   refresh.expiration-days= 2
-   security.cookie.domain=localhost
-   security.cookie.secure=false  
- 
- configure in backend/src/main/resources/application-test.properties
-   spring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
-   spring.datasource.driver-class-name=org.h2.Driver
-   spring.datasource.username=sa
-   spring.datasource.password=
-   spring.sql.init.mode=never
-   spring.jpa.hibernate.ddl-auto=create-drop
-   spring.jpa.show-sql=true
-   spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect
+ create database with a user and password, and configure backend/src/main/resources/application.properties
 
  ### 3. Run
  cd backend

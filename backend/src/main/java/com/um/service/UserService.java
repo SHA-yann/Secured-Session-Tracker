@@ -11,8 +11,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.um.DTOs.UserRequest;
 import com.um.Exceptions.*;
+import com.um.dto.UserRequest;
 import com.um.model.Role;
 import com.um.model.User;
 import com.um.repository.UserRepository;

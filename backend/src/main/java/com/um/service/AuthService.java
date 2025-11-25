@@ -12,8 +12,8 @@ import org.springframework.stereotype.Service;
 
 import com.um.configuration.CookieProvider;
 import com.um.configuration.JwtProvider;
-import com.um.DTOs.AuthRequest;
-import com.um.DTOs.AuthResponse;
+import com.um.dto.AuthRequest;
+import com.um.dto.AuthResponse;
 import com.um.model.RefreshToken;
 import com.um.model.User;
 

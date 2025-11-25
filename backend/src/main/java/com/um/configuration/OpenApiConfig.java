@@ -31,9 +31,9 @@ public class OpenApiConfig {
     OpenAPI customOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("User management API")
+                        .title("Access management demo Api")
                         .version("1.0")
-                        .description("API with JWT authentication"))
+                        .description("API with JWT authorization"))
                 .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
                 .components(new Components().addSecuritySchemes("bearerAuth",
                         new SecurityScheme()

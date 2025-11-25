@@ -18,5 +18,5 @@ INSERT INTO users (id, created_at, created_by, email, password, role, status, up
     VALUES (5, NOW(), 'Yann', 'emma@example.com', '$2b$12$RbvxALl4QRkCNogzsHWUHuvYp0pyaqEGHPD.omwyR1DbmJlPd74fi', 'USER', 'ACTIVE', NOW(), 'David', 'Emma')
     ON CONFLICT (email) DO NOTHING;
 
--- Mettre la séquence à jour pour qu'elle continue après le max actuel
+-- Update the sequence so that it continues after the current maximum
 SELECT setval('users_id_seq', (SELECT MAX(id) FROM users));
