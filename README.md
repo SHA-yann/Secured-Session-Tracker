@@ -102,7 +102,7 @@ curl -X GET http://localhost:8080/users \
   -H "Authorization: Bearer <your_token_jwt>"
 
 ## Advanced Security / Roles
-The API manages Roles and Permissions (e.g., ADMIN, USER).
+The API manages Roles and Permissions (e.g., ADMIN, USER), prevent from role escalation / status modification
 Sensitive endpoints (such as user creation or deletion) are restricted to ADMIN users only.
 To test with different roles:
 Create users with role: USER or role: ADMIN.
