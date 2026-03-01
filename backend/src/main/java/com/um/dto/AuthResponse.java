@@ -28,10 +28,4 @@ public class AuthResponse {
             example = "refresh_token=abc123; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=604800")
     private Cookie refreshCookie;
 
-    // Getters et setters
-    public String getAccessToken() { return accessToken; }
-    public void setAccessToken(String accessToken) { this.accessToken = accessToken; }
-
-    public Cookie getRefreshCookie() { return refreshCookie; }
-    public void setRefreshCookie(Cookie refreshCookie) { this.refreshCookie = refreshCookie; }
 }
