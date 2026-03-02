@@ -33,6 +33,7 @@ import com.um.service.MyUserDetailsService;
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
+    private final RateLimitingFilter rateLimitingFilter
 
     /**
      * Creates a new {@code SecurityConfig}.
@@ -40,8 +41,10 @@ public class SecurityConfig {
      * @param jwtAuthFilter the JWT authentication filter
      * @param userDetailsService the user details service (injected for future use)
      */
-    public SecurityConfig(@Lazy JwtAuthFilter jwtAuthFilter, MyUserDetailsService userDetailsService) {
+    public SecurityConfig(@Lazy JwtAuthFilter jwtAuthFilter,
+    							RateLimitingFilter rateLimitingFilter, MyUserDetailsService userDetailsService) {
         this.jwtAuthFilter = jwtAuthFilter;
+        this.rateLimitingFilter = rateLimitingFilter;
     }
 
     /**
@@ -85,7 +88,8 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(jwtAuthFilter, RateLimitingFilter.class);
 
         return http.build();
     }
