@@ -1,4 +1,6 @@
 HELP.md
+
+### java / maven ###
 target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
@@ -9,25 +11,17 @@ target/
 .classpath
 .factorypath
 .project
-.settings
+.settings/
 .springBeans
 .sts4-cache
+.qodo/
 
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
+### VSCode ###
+*.vscode/
 
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
+### Docker logs ###
+*.log
 
-### VS Code ###
-.vscode/
+### Secrets ###
+.env
+*.local

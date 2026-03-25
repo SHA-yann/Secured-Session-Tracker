@@ -1,0 +1,12 @@
+#
+src/
+pom.xml
+mvnw
+mvnw.cmd
+
+#
+target/
+.git
+.env
+Dockerfile
+docker-compose.yml
