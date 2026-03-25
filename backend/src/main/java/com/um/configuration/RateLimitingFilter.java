@@ -9,6 +9,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.um.service.RateLimitingService;
 
+import io.github.bucket4j.Bucket;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -38,7 +39,7 @@ public class RateLimitingFilter extends OncePerRequestFilter{
 		}
 		
 		
-		Bucket bucket= rateLimitingService.resolveBucket(key)
+		Bucket bucket= rateLimitingService.resolveBucket(key);
 		
 				if(bucket.tryConsume(1)) {
 					filterChain.doFilter(request, response);
