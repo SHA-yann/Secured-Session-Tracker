@@ -58,7 +58,6 @@ class AuthControllerIT {
     void shouldReturnAccessToken_AndRefreshCookie() throws Exception {
         // Test login endpoint returns JWT access token and HttpOnly refresh cookie
         mockMvc.perform(post("/auth/login")
-        		//.header("Authorization", authHeader)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"username\":\"Yann\",\"password\":\"password123\"}"))
                 .andExpect(status().isOk())

@@ -33,7 +33,7 @@ import com.um.service.MyUserDetailsService;
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
-    private final RateLimitingFilter rateLimitingFilter
+    private final RateLimitingFilter rateLimitingFilter;
 
     /**
      * Creates a new {@code SecurityConfig}.
@@ -80,16 +80,17 @@ public class SecurityConfig {
             .cors(Customizer.withDefaults())
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/login","/auth/refresh","/swagger-ui/**","/swagger-ressources/**", "/v3/api-docs/**","/webjars/**").permitAll()
+                .requestMatchers("/auth/login","/auth/refresh","/swagger-ui/**","/v3/api-docs/**","/webjars/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/users").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/users/**").hasAnyRole("ADMIN","USER")
                 .requestMatchers(HttpMethod.PUT, "/users/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/users/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            
             .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
-            .addFilterAfter(jwtAuthFilter, RateLimitingFilter.class);
+            .addFilterAfter(jwtAuthFilter, RateLimitingFilter.class)
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         return http.build();
     }

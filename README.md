@@ -109,6 +109,11 @@ Create users with role: USER or role: ADMIN.
 Authenticate each user to obtain the corresponding token.
 Include the token in the request header: Authorization: Bearer <token>.
 
+## Monitoring
+The API exposes a management interface on port 8087
+Sytem health:/actuator/health
+Prometheus metrics:/actuator/prometheus
+
 ### Example of a restricted endpoint:
 DELETE /users/{id} → accessible only by an ADMIN user.
 GET /users/mail/{email } → accessible only by an ADMIN user.

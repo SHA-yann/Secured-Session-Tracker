@@ -46,6 +46,7 @@ import com.um.dto.UserRequest;
 import com.um.model.Role;
 import com.um.model.Status;
 import com.um.model.User;
+import com.um.service.RateLimitingService;
 import com.um.service.UserService;
 
 @WebMvcTest(UserController.class)
@@ -57,6 +58,9 @@ class UserControllerTest {
 	
 	@MockitoBean
 	private UserService userService;
+	
+	@MockitoBean
+	private RateLimitingService rateLimitingService;
 	
 	@MockitoBean
 	private JwtAuthFilter jwtAuthFilter;

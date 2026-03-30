@@ -1,0 +1,30 @@
+# --- Java / Maven ---
+**/target/
+**/*.jar
+**/*.war
+**/*.ear
+
+# --- Logs ---
+**/logs/
+**/*.log
+
+# --- Docker & CI/CD ---
+**/docker/
+.git/
+.github/
+.gitignore
+docker-compose.yml
+Dockerfile
+
+# --- IDEs & OS ---
+**/.idea/
+**/.vscode/
+**/.settings/
+**/.classpath
+**/.project
+**/*.iml
+.DS_Store
+Thumbs.db
+
+# --- Environnement ---
+**/.env

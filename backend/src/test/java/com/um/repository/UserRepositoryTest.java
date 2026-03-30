@@ -10,16 +10,21 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.test.context.ActiveProfiles;
-
+import org.springframework.test.context.ContextConfiguration;
+import com.um.BackendApplication;
+import com.um.configuration.AbstractIntegrationTest;
 import com.um.model.Role;
 import com.um.model.Status;
 import com.um.model.User;
 
-@DataJpaTest                 // Configure un contexte réduit avec une base en mémoire pour tester uniquement la couche repository
-@ActiveProfiles("test")       // Utilisation du profil "test" (H2, config simplifiée, etc.)
-class UserRepositoryTest {
+@DataJpaTest
+@ActiveProfiles("test")
+@ContextConfiguration(classes = BackendApplication.class)
+@AutoConfigureTestDatabase(replace= AutoConfigureTestDatabase.Replace.NONE)
+class UserRepositoryTest extends AbstractIntegrationTest{
     
     @Autowired
     private UserRepository userRepository; // Repository testé

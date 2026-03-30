@@ -2,14 +2,11 @@ package com.um.configuration;
 
 import java.io.IOException;
 
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.um.service.RateLimitingService;
 
-import io.github.bucket4j.Bucket;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,24 +26,25 @@ public class RateLimitingFilter extends OncePerRequestFilter{
 									HttpServletResponse response,
 									FilterChain filterChain) throws ServletException,IOException{
 		
-		String key;
-		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-		
-		if(auth!=null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal())) {
-			key=auth.getName();
-		}else {
-			key=request.getRemoteAddr();
+		String path = request.getRequestURI();
+
+		if(path.startsWith("/swagger-ui") || path.startsWith("/v3/api-docs") || path.startsWith("/actuator") || path.startsWith("/favicon.ico")) {
+			filterChain.doFilter(request, response);
+			return;
 		}
 		
+		RateLimitingPlan plan = rateLimitingService.determinePlan(path, 
+																request.getHeader("Authorization"),
+																request.getHeader("X-API-Key"));
+		String clientIP = request.getRemoteAddr();
+		String key = clientIP + ":" + plan.name();
 		
-		Bucket bucket= rateLimitingService.resolveBucket(key);
-		
-				if(bucket.tryConsume(1)) {
-					filterChain.doFilter(request, response);
-				}else {
-					response.setStatus(429);
-					response.setContentType("application/json");
-					response.getWriter().write("{\"error\":\"Vous avez effectué un trop grand nombre de requêtes!...Réessayez plus tard.\"}");
-				}
+		if(rateLimitingService.resolveBucket(key,plan).tryConsume(1)) {
+			filterChain.doFilter(request, response);
+		}else {
+			response.setStatus(429);
+			response.setContentType("application/json");
+			response.getWriter().write(String.format("{\"error\":\"Trop de requêtes!...Réessayez dans 1 minute.\"}", plan.name()));
+		}
 	}
 }

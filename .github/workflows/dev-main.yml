@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: dev
+  pull_request:
+    branches: [dev, main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      docker:
+        image:docker:dind
+        options: --privileged
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK and cache maven
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: 'maven'
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('securityApi/backend/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+          
+      - name: Run tests with TestContainers
+        working-directory: ./securityApi/backend
+        env:
+          SPRING_PROFILES_ACTIVE: test
+          JWT_SECRET: ${{ secrets_JWT_SECRET }}
+        run:  |
+          mvn clean verify
+          mvn checkstyle:checkstyle
+        
+      - name: Build application jar
+        working-directory: ./securityApi/backend
+        run: mvn package -DskipTests
+
+      - name: login to Docker hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username:${{ secrets_DOCKERHUB_USERNAME }}
+          password:${{ secrets_DOCKERHUB_TOKEN }}
+
+      - name: Push docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./securityApi
+          file: ./securityApi/docker/Dockerfile
+          push: ${{github.event_name !='pull_request'}}
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/security-api:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
