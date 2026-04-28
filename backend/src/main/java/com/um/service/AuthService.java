@@ -1,38 +1,45 @@
 package com.um.service;
 
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
+import org.springframework.security.authentication.ReactiveAuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
+import com.um.Exceptions.ResourceNotFoundException;
 import com.um.configuration.CookieProvider;
 import com.um.configuration.JwtProvider;
 import com.um.dto.AuthRequest;
-import com.um.dto.AuthResponse;
 import com.um.model.RefreshToken;
 import com.um.model.User;
 
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 /**
  * Service handling user authentication, JWT issuance, refresh token rotation,
  * and logout operations.
  */
 @Service
+@Slf4j
 public class AuthService {
 
-    private final AuthenticationManager authenticationManager;
+    private final ReactiveAuthenticationManager authenticationManager;
     private final UserService userService;
     private final MyUserDetailsService myUserDetailsService;
     private final JwtProvider jwtProvider;
     private final RefreshTokenService refreshTokenService;
-
+    
     @Value("${security.cookie.domain}")
     private String cookieDomain;
 
@@ -41,7 +48,7 @@ public class AuthService {
 
     private static final String REFRESH_COOKIE = "refresh_token";
 
-    public AuthService(AuthenticationManager authenticationManager,
+    public AuthService(ReactiveAuthenticationManager authenticationManager,
                        UserService userService,
                        JwtProvider jwtProvider,
                        MyUserDetailsService myUserDetailsService,
@@ -59,18 +66,33 @@ public class AuthService {
      * @param request login credentials
      * @return AuthResponse containing JWT and refresh cookie
      */
-    public AuthResponse login(AuthRequest request) {
-        Authentication auth = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
-        );
-
-        String accessToken = jwtProvider.generateToken((UserDetails) auth.getPrincipal());
-        RefreshToken rt = refreshTokenService.issue(userService.findByName(auth.getName()).get());
-
-        int maxAge = (int) (rt.getExpiresAt().getEpochSecond() - Instant.now().getEpochSecond());
-        Cookie refreshCookie = CookieProvider.createCookie(REFRESH_COOKIE, rt.getToken(), cookieDomain, cookieSecure, maxAge);
-
-        return new AuthResponse(accessToken, refreshCookie);
+    @Transactional
+    public Mono<Map<Integer,Object>> login(AuthRequest request) {
+    	
+    	return authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()))
+    								.flatMap(auth ->{
+    									UserDetails userDetails = (UserDetails) auth.getPrincipal();
+    									String accessToken = jwtProvider.generateToken(userDetails);
+    									return Mono.fromCallable(() -> 
+    											userService.findByName(auth.getName()))
+       											.subscribeOn(Schedulers.boundedElastic())
+    											.flatMap(oP -> Mono.justOrEmpty(oP))
+    											//.log("DEBUG_LOGIN")
+    											.flatMap( user -> {
+    												return Mono.fromCallable(() -> refreshTokenService.issue(user))
+    														.subscribeOn(Schedulers.boundedElastic())
+    														.map( rt -> {
+			    												int maxAge = (int) (rt.getExpiresAt().getEpochSecond() - Instant.now().getEpochSecond());
+			    												ResponseCookie refreshCookie = CookieProvider.createCookie(REFRESH_COOKIE, rt.getToken(), cookieDomain, cookieSecure, maxAge);
+			    												var res = new HashMap<Integer,Object>();
+			    										        res.put(2, refreshCookie);
+			    										        res.put(1, accessToken);
+			    										        return res;
+    														});
+    											});
+    											
+    								});
+    	
     }
 
     /**
@@ -79,29 +101,35 @@ public class AuthService {
      * @param request HTTP request containing the refresh cookie
      * @return AuthResponse with new JWT and refresh cookie
      */
-    public AuthResponse refresh(HttpServletRequest request) {
-        Cookie[] cookies = request.getCookies();
-        if (cookies == null) return null;
-
-        String raw = null;
-        for (Cookie c : cookies) {
-            if (REFRESH_COOKIE.equals(c.getName())) {
-                raw = c.getValue();
-                break;
-            }
-        }
-        if (raw == null || raw.isBlank()) return null;
-
-        RefreshToken currentRt = refreshTokenService.verify(raw);
-        RefreshToken nextRt = refreshTokenService.rotate(currentRt);
-
-        String username = currentRt.getUser().getUsername();
-        String newAccess = jwtProvider.generateToken(myUserDetailsService.loadUserByUsername(username));
-
-        int maxAge = (int) (nextRt.getExpiresAt().getEpochSecond() - Instant.now().getEpochSecond());
-        Cookie newRefreshCookie = CookieProvider.createCookie(REFRESH_COOKIE, nextRt.getToken(), cookieDomain, cookieSecure, maxAge);
-
-        return new AuthResponse(newAccess, newRefreshCookie);
+    @Transactional(readOnly = true)
+    public Mono<Map<Integer,Object>> refresh(String rToken) {
+    	
+        if (rToken == null || rToken.isBlank()) 
+        	return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,"Missing Refresh token"));
+        
+        return Mono.fromCallable(()->{
+        	try {
+	        	RefreshToken currentRt = refreshTokenService.verify(rToken);
+	        	return refreshTokenService.rotate(currentRt);
+        	}catch(ResourceNotFoundException | IllegalStateException e) {
+        		throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,e.getMessage());
+        	}
+    			}).subscribeOn(Schedulers.boundedElastic())
+        		  //.log("DEBUG_REFRESH")
+        		  .flatMap(nextRt -> {
+        			  String username = nextRt.getUser().getUsername();
+        			  return myUserDetailsService.findByUsername(username)
+        					  .map(uD -> {
+        						String newAccess = jwtProvider.generateToken(uD);
+		        			    int maxAge = (int) (nextRt.getExpiresAt().getEpochSecond() - Instant.now().getEpochSecond());
+						        ResponseCookie newRefreshCookie = CookieProvider.createCookie(REFRESH_COOKIE, nextRt.getToken(), cookieDomain, cookieSecure, maxAge);
+						        Map<Integer,Object> res = new HashMap<Integer,Object>();
+						        res.put(2, newRefreshCookie);
+						        res.put(1, newAccess);
+						        return res;
+        					  	});
+        		  });
+        	
     }
 
     /**
@@ -110,10 +138,11 @@ public class AuthService {
      * @param username identifier of the user
      * @return true if successful, false if user not found
      */
+    @Transactional
     public boolean logout(String username) {
-        Optional<User> user = userService.findByName(username);
-        if (user.isPresent()) {
-            refreshTokenService.revokeUserTokens(user.get().getId());
+        Optional<User> oP= userService.findByName(username);
+        if (oP.isPresent()) {
+            refreshTokenService.revokeUserTokens(oP.get().getId());
             return true;
         }
         return false;

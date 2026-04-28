@@ -5,17 +5,25 @@ import java.util.Optional;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.um.Exceptions.*;
+import com.um.dto.UpdateRequest;
 import com.um.dto.UserRequest;
 import com.um.model.Role;
+import com.um.model.Status;
 import com.um.model.User;
 import com.um.repository.UserRepository;
+
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 /**
  * Service for user management.
@@ -26,6 +34,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final RefreshTokenService refreshTokenService;
 
     /**
      * Constructs a UserService with required dependencies.
@@ -33,9 +42,11 @@ public class UserService {
      * @param userRepository repository for accessing user entities
      * @param passwordEncoder encoder for hashing user passwords
      */
-    public UserService(UserRepository userRepository,@Lazy PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository,@Lazy PasswordEncoder passwordEncoder, 
+    					RefreshTokenService refreshTokenService) {
         this.userRepository = userRepository;
 		this.passwordEncoder = passwordEncoder;
+		this.refreshTokenService = refreshTokenService;
     }
 
     /**
@@ -46,11 +57,11 @@ public class UserService {
      * @throws UserAlreadyExistsException if username is already taken
      */
     @Transactional
-    @PreAuthorize("hasRole('ADMIN')")
-    public User createUser(UserRequest dto, String author) {
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public Mono<User> createUser(UserRequest dto, String author) {
         
     	if (userRepository.existsByUsername(dto.username())) {
-            throw new UserAlreadyExistsException("Username " + dto.username() + " already taken");
+            return Mono.error( new UserAlreadyExistsException("Username " + dto.username() + " already taken"));
         }
     	
     	User user= new User(
@@ -62,7 +73,8 @@ public class UserService {
         user.setCreatedBy(author);
         user.setUpdatedBy(author);
 
-        return userRepository.save(user);
+        return Mono.fromCallable(() -> userRepository.save(user))
+        			.subscribeOn(Schedulers.boundedElastic());
     }
 
     /**
@@ -71,9 +83,12 @@ public class UserService {
      * @param pageable pagination settings
      * @return page of users
      */
-    @PreAuthorize("hasAnyRole('ADMIN','USER')")
-    public Page<User> getAllUsers(Pageable pageable) {
-        return userRepository.findAll(pageable);
+    @Transactional(readOnly = true)
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN','ROLE_USER')")
+    public Mono<Page<User>> getAllUsers(Pageable pageable) {
+        
+    	return  Mono.fromCallable(() -> userRepository.findAll(pageable))
+    				.subscribeOn(Schedulers.boundedElastic());
     }
 
     /**
@@ -83,10 +98,15 @@ public class UserService {
      * @return Optional containing the user if found
      * @throws UserNotFoundException if user not found
      */
-    @PreAuthorize("hasRole('ADMIN')")
-    public Optional<User> getUserById(long id) {
-        return Optional.of(userRepository.findById(id)
-                .orElseThrow(() -> new UserNotFoundException("User with id " + id + " not found")));
+    @Transactional(readOnly = true)
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public Mono<User> getUserById(long id) {
+    	
+			return Mono.fromCallable(() -> {
+						return userRepository.findById(id)
+								.orElseThrow(() -> new UserNotFoundException("User with id " + id + " not found"));
+				}).subscribeOn(Schedulers.boundedElastic());
+	
     }
 
     /**
@@ -96,10 +116,14 @@ public class UserService {
      * @return Optional containing the user if found
      * @throws UserNotFoundException if user not found
      */
-    @PreAuthorize("hasRole('ADMIN')")
-    public Optional<User> getUserByEmail(String email) {
-        return Optional.of(userRepository.findByEmail(email)
-                .orElseThrow(() -> new UserNotFoundException("User with email " + email + " not found")));
+    @Transactional(readOnly = true)
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public Mono<User> getUserByEmail(String email) {
+    	
+    	return Mono.fromCallable(() -> userRepository.findByEmail(email)
+    				.orElseThrow(() -> new UserNotFoundException("User with email " + email + " not found"))
+    				).subscribeOn(Schedulers.boundedElastic());
+    	
     }
 
     /**
@@ -112,28 +136,39 @@ public class UserService {
      * @throws UserNotFoundException if user not found
      */
     @Transactional
-    @PreAuthorize("hasRole('ADMIN') or #username==principal.username")
-    public Optional<User> updateUser(String username, UserRequest update, String author) {
-        return Optional.of(userRepository.findByUsername(username)
-                .map(found -> {
-                    found.setEmail(update.email());
-                    found.setCreatedBy(author);
-                    found.setUpdatedBy(author);
-
-                    boolean isAdmin = SecurityContextHolder.getContext().getAuthentication()
-                            .getAuthorities()
+    public Mono<User> updateUser(Long id, UpdateRequest update, String author) {
+        
+    	return ReactiveSecurityContextHolder.getContext()
+    			.map(SecurityContext::getAuthentication)
+    			.flatMap(auth -> {
+    				boolean isAdmin = auth.getAuthorities()
                             .stream()
-                            .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
+                            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+    				
+    				String currentUsername = auth.getName();
 
-                    if (isAdmin) {
-                        found.setRole(update.role());
-                        found.setStatus(update.status());
-                    }
+    				return Mono.fromCallable(() -> {
+    					return userRepository.findById(id)
+    			                .map(found -> {
+    			                	if(!isAdmin && !found.getUsername().equals(currentUsername))
+    			                		throw new AccessDeniedException("You are not Owner or Admin to modify these fields");
+    			                	
+    			                    found.setEmail(update.email());
+    			                    found.setUpdatedBy(author);    			                            
 
-                    return userRepository.save(found);
-                })
-                .orElseThrow(() -> new UserNotFoundException("User with name " + username + " not found")));
-    }
+    			                    if (!isAdmin)
+    			                    	throw new AccessDeniedException("Only Admin can modify a role or a status");
+    			                    else{
+    			                        found.setRole(update.role());
+    			                        found.setStatus(update.status());
+    			                    }
+
+    			                    return userRepository.save(found);
+    			                }).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+    				}).subscribeOn(Schedulers.boundedElastic());
+    			                
+    			});
+   }
 
     /**
      * Deletes a user by ID.
@@ -142,12 +177,23 @@ public class UserService {
      * @throws UserNotFoundException if user not found
      */
     @Transactional
-    @PreAuthorize("hasRole('ADMIN')")
-    public void deleteUser(Long id) {
-        if (!userRepository.existsById(id)) {
-            throw new UserNotFoundException("User with id " + id + " not found");
-        }
-        userRepository.deleteById(id);
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public Mono<Void> disableUser(Long id) {
+        
+        return Mono.fromCallable(() -> {
+					return userRepository.findById(id)
+					.orElseThrow(() -> new UserNotFoundException("User with id " + id + " not found"));
+					}).subscribeOn(Schedulers.boundedElastic())
+					.flatMap(u -> {
+						u.setStatus(Status.INACTIVE);
+						refreshTokenService.revokeUserTokens(u.getId());
+						return Mono.fromCallable(() -> {									
+									userRepository.save(u);
+									return u;
+									})
+									.subscribeOn(Schedulers.boundedElastic());
+				    }).then();
+        
     }
 
     /**
@@ -156,8 +202,10 @@ public class UserService {
      * @param username username
      * @return Optional containing the user
      */
+    @Transactional(readOnly = true)
     public Optional<User> findByName(String username) {
-        return userRepository.findByUsername(username);
+        return Optional.of(userRepository.findByUsername(username)
+        		.orElseThrow(() -> new UserNotFoundException("User not found")));
     }
 
     /**
@@ -168,20 +216,27 @@ public class UserService {
      * @param pageable pagination settings
      * @return page of users matching filters
      */
-    @PreAuthorize("hasAnyRole('ADMIN','USER')")
-    public Page<User> searchUsers(String username, Role role, Pageable pageable) {
-        if (username != null && !username.isBlank()) {
+    @Transactional(readOnly = true)
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN','ROLE_USER')")
+    public Mono<Page<User>> searchUsers(String username, Role role, Pageable pageable) {
+    	
+    	return Mono.fromCallable(() -> {
+    		if (username != null && !username.isBlank()) {
             return userRepository.findByUsernameContainingIgnoreCase(username, pageable);
         }
-        if (role != null) {
+        else if (role != null) {
             return userRepository.findByRole(role, pageable);
         }
-        return userRepository.findAll(pageable);
+        else
+        	return userRepository.findAll(pageable);
+    	}).subscribeOn(Schedulers.boundedElastic());
+        
     }
 
     /**
      * Deletes all users and flushes the repository.
      */
+    @Transactional(readOnly = true)
     public void wipeAll() {
         userRepository.deleteAll();
         userRepository.flush();

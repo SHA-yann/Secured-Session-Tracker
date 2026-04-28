@@ -1,21 +1,51 @@
-# Java
-target/
-*.class
-
-# Maven
-.mvn/
-!.mvn/wrapper/maven-wrapper.jar
-
-# IntelliJ / Eclipse
+# 1. OS & IDE (VS Code, STS/Eclipse, IntelliJ)
 .idea/
-*.iml
-.project
+.vscode/
+.settings/
 .classpath
-
-# Node
-node_modules/
-dist/
-
-# OS files
-.DS_Store
+.project
+.factorypath
+bin/
+*.swp
+*.class
 Thumbs.db
+.DS_Store
+
+# 2. SECRETS & CONFIGURATION (Crucial)
+.env
+
+
+# Dossiers de données Docker/Observabilité
+# (Évite de committer les bases de données Prometheus ou les logs Loki)
+docker/volumes/
+docker/prometheus/data/
+docker/grafana/data/
+docker/loki/data/
+
+# 3. BACKEND (Java / Maven)
+**/target/
+backend/target/
+.mvn/wrapper/maven-wrapper.jar
+.mvn/
+
+# 4. FRONTEND (Angular / Node)
+frontend/node_modules/
+frontend/dist/
+frontend/.qodo/
+frontend/.angular/
+frontend/.editorconfig
+frontend/package-lock.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 5. KUBERNETES & INFRA
+*.kubeconfig
+certs/
+secrets/*.yaml
+!secrets/template-*.yaml
+
+# 6. EXCEPTIONS (Whitelist)
+# ==========================================
+# On garde les fichiers d'exemple pour aider les collègues
+!.env.example

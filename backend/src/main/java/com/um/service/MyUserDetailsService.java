@@ -1,29 +1,37 @@
 package com.um.service;
 
-import java.util.Optional;
-
+import org.springframework.security.core.userdetails.ReactiveUserDetailsService;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import com.um.model.User;
+import com.um.Exceptions.UserNotFoundException;
+import com.um.repository.UserRepository;
+
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 /**
  * Custom UserDetailsService implementation for Spring Security.
  * Loads user information from the database for authentication.
  */
 @Service
-public class MyUserDetailsService implements UserDetailsService {
+public class MyUserDetailsService implements ReactiveUserDetailsService {
 
-    private final UserService userService;
+    private final PasswordEncoder passwordEncoder;
+
+    private final UserRepository userRepo;
     /**
      * Constructor injecting UserService dependency.
      *
      * @param userService service to access user data
      */
-    public MyUserDetailsService(UserService userService) {
-        this.userService = userService;
+    public MyUserDetailsService(UserRepository userRepo, PasswordEncoder passwordEncoder) {
+        this.userRepo = userRepo;
+        this.passwordEncoder = passwordEncoder;
     }
 
     /**
@@ -34,18 +42,17 @@ public class MyUserDetailsService implements UserDetailsService {
      * @throws UsernameNotFoundException if the user is not found
      */
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        Optional<User> user = userService.findByName(username);
+    @Transactional
+    public Mono<UserDetails> findByUsername(String username) {
 
-        if (!user.isPresent()) {
-            throw new UsernameNotFoundException("User not found");
-        }
-
-        return new org.springframework.security.core.userdetails.User(
-        		user.get().getUsername(),
-                user.get().getPassword(),
-                user.get().getAuthorities()
-        );
+        return Mono.fromCallable(() -> userRepo.findByUsername(username)
+        										.map(user -> User.builder()
+			        										.username(user.getUsername())
+			        										.password(user.getPassword())
+			        										.authorities(user.getAuthorities())
+			        										.build())
+			        							.orElseThrow(() -> new UserNotFoundException("No such user"))
+        										).subscribeOn(Schedulers.boundedElastic());
     }
     
 }

@@ -10,9 +10,14 @@ import java.util.stream.Collectors;
 import javax.crypto.SecretKey;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
+
+import com.um.model.Status;
+import com.um.repository.UserRepository;
+import com.um.service.UserService;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -20,6 +25,8 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
 
 /**
  * Utility class for JWT generation, parsing, and validation.
@@ -28,10 +35,13 @@ import lombok.Setter;
 @Getter
 @Setter
 @Component
+@Slf4j
 public class JwtProvider {
 
     private final SecretKey key;
     private final Long expiration;
+    private final UserRepository userRepo;
+    private final ReactiveStringRedisTemplate redisTemplate;
 
     /**
      * Constructor initializing the secret key and token expiration time.
@@ -40,9 +50,13 @@ public class JwtProvider {
      * @param expiration token expiration in milliseconds
      */
     public JwtProvider(@Value("${jwt.secret}") String secret,
-                       @Value("${jwt.expiration}") long expiration) {
+                       @Value("${jwt.expiration}") long expiration,
+                       UserRepository userRepo,
+                       ReactiveStringRedisTemplate redisTemplate) {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expiration = expiration;
+        this.userRepo = userRepo;
+        this.redisTemplate = redisTemplate;
     }
 
     /**
@@ -65,7 +79,7 @@ public class JwtProvider {
     /**
      * Generates a JWT token for a given user.
      * Includes user roles as claims.
-     *
+     *	
      * @param userDetails authenticated user details
      * @return JWT token string
      */
@@ -74,6 +88,10 @@ public class JwtProvider {
         claims.put("Role", userDetails.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toList()));
+        Long userAuthenticatedId = userRepo.findByUsername(userDetails.getUsername()).get().getId();
+        String userAuthenticatedStatus = userRepo.findByUsername(userDetails.getUsername()).get().getStatus().name();
+        claims.put("ID",userAuthenticatedId );
+        claims.put("uStatus", userAuthenticatedStatus);
         return createToken(claims, userDetails.getUsername());
     }
 
@@ -134,11 +152,16 @@ public class JwtProvider {
      * @param token JWT string
      * @return Claims object
      */
-    private Claims extractAllClaims(String token) {
+    Claims extractAllClaims(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(key)
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
+    }
+    
+    public Mono<Boolean> isBlacklisted(String token) {
+    	
+    	return redisTemplate.hasKey("Blacklist:"+token);
     }
 }

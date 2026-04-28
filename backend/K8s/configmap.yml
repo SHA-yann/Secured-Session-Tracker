@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+  namespace: default
+data:
+      #API Configuration
+  SERVER_PORT: "8080"
+  MANAGEMENT_PORT: "8087"
+  
+  SPRING_PROFILES_ACTIVE: "prod"
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres-service:5432/usermanagement"
+  SPRING_DATASOURCE_USERNAME: "umuser"
+  SPRING_DATASOURCE_PASSWORD: "umpass"
+  SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT: "60000"
+  JWT_SECRET: "mymostcomplexeandlongsecretforjwt"
+      #Database Configuration
+  POSTGRES_DB: "usermanagement"
+  POSTGRES_USER: "umuser"
+  POSTGRES_PASSWORD: "umpass"

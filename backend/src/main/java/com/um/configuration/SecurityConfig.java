@@ -5,21 +5,30 @@ import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.authentication.ReactiveAuthenticationManager;
+import org.springframework.security.authentication.UserDetailsRepositoryReactiveAuthenticationManager;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
+import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
+import org.springframework.security.config.web.server.ServerHttpSecurity;
+import org.springframework.security.core.userdetails.ReactiveUserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.security.web.server.context.NoOpServerSecurityContextRepository;
 import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.cors.reactive.CorsConfigurationSource;
+import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
+import org.springframework.web.server.WebFilter;
 
 import com.um.service.MyUserDetailsService;
 
@@ -28,8 +37,8 @@ import com.um.service.MyUserDetailsService;
  * Sets up authentication, authorization, JWT filter, and CORS.
  */
 @Configuration
-@EnableWebSecurity
-@EnableMethodSecurity(prePostEnabled = true)
+@EnableWebFluxSecurity
+@EnableReactiveMethodSecurity
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
@@ -42,7 +51,7 @@ public class SecurityConfig {
      * @param userDetailsService the user details service (injected for future use)
      */
     public SecurityConfig(@Lazy JwtAuthFilter jwtAuthFilter,
-    							RateLimitingFilter rateLimitingFilter, MyUserDetailsService userDetailsService) {
+    							RateLimitingFilter rateLimitingFilter, @Lazy MyUserDetailsService userDetailsService) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.rateLimitingFilter = rateLimitingFilter;
     }
@@ -71,28 +80,45 @@ public class SecurityConfig {
      * </ul>
      *
      * @param http the {@link HttpSecurity} object to configure
+     * @return 
      * @return the configured {@link SecurityFilterChain}
      * @throws Exception if configuration fails
      */
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+     SecurityWebFilterChain securityFilterChain(ServerHttpSecurity http,CorsConfigurationSource corsSource) {
         http
-            .cors(Customizer.withDefaults())
-            .csrf(csrf -> csrf.disable())
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/login","/auth/refresh","/swagger-ui/**","/v3/api-docs/**","/webjars/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/users").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.GET, "/users/**").hasAnyRole("ADMIN","USER")
-                .requestMatchers(HttpMethod.PUT, "/users/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/users/**").hasRole("ADMIN")
-                .anyRequest().authenticated()
+            .cors(cors -> cors.configurationSource(corsSource))
+            .csrf(ServerHttpSecurity.CsrfSpec::disable)
+            .authorizeExchange(auth -> auth
+                .pathMatchers("/notifications/stream","/auth/login","/auth/refresh","/swagger-ui/**","/v3/api-docs/**","/webjars/**","/actuator/prometheus","/actuator/health/**","/actuator/info").permitAll()
+                .pathMatchers(HttpMethod.POST, "/users").hasAnyAuthority("ROLE_ADMIN","ROLE_USER")
+                .pathMatchers(HttpMethod.GET, "/users","/users/**").hasAuthority("ROLE_ADMIN")
+                .pathMatchers(HttpMethod.PUT, "/users/**").hasAuthority("ROLE_ADMIN")
+                .pathMatchers(HttpMethod.DELETE, "/users/**").hasAuthority("ROLE_ADMIN")
+                .anyExchange().authenticated()
             )
-            
-            .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
-            .addFilterAfter(jwtAuthFilter, RateLimitingFilter.class)
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+            .exceptionHandling(exceptionHandling -> exceptionHandling
+            		.authenticationEntryPoint((exchange, e) ->{
+            			exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+            			exchange.getResponse().getHeaders().remove(HttpHeaders.WWW_AUTHENTICATE);
+            			return exchange.getResponse().setComplete();
+            		})
+            )
+            .addFilterBefore(jwtAuthFilter, SecurityWebFiltersOrder.AUTHENTICATION)
+            .addFilterAfter(rateLimitingFilter, SecurityWebFiltersOrder.AUTHENTICATION)
+            .securityContextRepository(NoOpServerSecurityContextRepository.getInstance());
 
         return http.build();
+    }
+    
+    @Bean
+    @Order(Ordered.HIGHEST_PRECEDENCE)
+    WebFilter logFilter() {
+    	return (exchange, chain) ->{
+    		System.out.println(">>>Requete entrante:"+exchange.getRequest().getPath());
+    		System.out.println("Headers:"+exchange.getRequest().getHeaders());
+    		return chain.filter(exchange);
+    	};
     }
 
     /**
@@ -109,9 +135,10 @@ public class SecurityConfig {
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:4200"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
-        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE","OPTIONS"));
+        configuration.setAllowedHeaders(List.of("Authorization","Content-Type","Accept"));
         configuration.setAllowCredentials(true);
+        configuration.setExposedHeaders(List.of("Set-Cookie"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
@@ -126,7 +153,10 @@ public class SecurityConfig {
      * @throws Exception if creation fails
      */
     @Bean
-    AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
+    ReactiveAuthenticationManager authenticationManager(ReactiveUserDetailsService userDetailsService, PasswordEncoder passWordEncoder) {
+        
+    	UserDetailsRepositoryReactiveAuthenticationManager authManager = new UserDetailsRepositoryReactiveAuthenticationManager(userDetailsService);
+    	authManager.setPasswordEncoder(passWordEncoder);
+    	return authManager;
     }
 }

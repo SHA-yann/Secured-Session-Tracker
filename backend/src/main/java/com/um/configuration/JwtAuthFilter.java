@@ -1,24 +1,32 @@
 package com.um.configuration;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
-import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebFilter;
+import org.springframework.web.server.WebFilterChain;
 
+import com.um.model.Status;
 import com.um.service.MyUserDetailsService;
 
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
+
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 
 /**
  * JWT Authentication filter that intercepts each request once,
@@ -26,7 +34,8 @@ import jakarta.servlet.http.HttpServletResponse;
  * validates it, and sets the security context accordingly.
  */
 @Component
-public class JwtAuthFilter extends OncePerRequestFilter {
+@Slf4j
+public class JwtAuthFilter implements WebFilter {
 
     private final JwtProvider jwtProvider;
     private final MyUserDetailsService userDetailsService;
@@ -42,54 +51,57 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         this.userDetailsService = userDetailsService;
     }
 
-    /**
-     * Filters incoming HTTP requests to authenticate JWT tokens.
-     * 
-     * @param request HTTP request
-     * @param response HTTP response
-     * @param filterChain filter chain
-     * @throws ServletException in case of servlet errors
-     * @throws IOException in case of I/O errors
-     */
-    @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
-
-        final String authHeader = request.getHeader("Authorization");
+	@Override
+	public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+		
+		if(exchange.getRequest().getURI().getPath().contains("/auth/refresh")) {
+        	
+        	return chain.filter(exchange);
+        }
+		
+		final String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
 
         // Skip filter if Authorization header is missing or malformed
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
-            return;
+            return chain.filter(exchange);
+            
         }
 
         final String token = authHeader.substring(7);
         final String username;
-
+        final String status;
+        			
         try {
             username = jwtProvider.extractUsername(token);
+            status = jwtProvider.extractAllClaims(token).get("uStatus").toString();
         } catch (Exception e) {
-            filterChain.doFilter(request, response);
-            return; // Invalid token, skip authentication
+            
+            return chain.filter(exchange); // Invalid token, skip authentication
         }
 
         // Set authentication in security context if not already set
-        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-
-            if (jwtProvider.validToken(token, userDetails)) {
-            	List<String> roles=jwtProvider.extractRole(token);
-            	List<GrantedAuthority> authorities = roles.stream()
-            			.map(SimpleGrantedAuthority::new)
-            			.collect(Collectors.toList());
-            	
-                UsernamePasswordAuthenticationToken authenticationToken =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
-                SecurityContextHolder.getContext().setAuthentication(authenticationToken);
-            }
-        }
-
-        filterChain.doFilter(request, response);
-    }
+        
+        if (username.isEmpty() || status.equalsIgnoreCase("inactive"))
+        	return chain.filter(exchange);
+        
+		return jwtProvider.isBlacklisted(token)
+				.flatMap(blocked -> {
+					if(!blocked)
+			        	return userDetailsService.findByUsername(username)
+							//.log("DEBUG-AUTH")
+							.flatMap(userDetails ->{
+								if(jwtProvider.validToken(token, userDetails)){
+			
+					                UsernamePasswordAuthenticationToken authenticationToken =
+					                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+					                
+					                return chain.filter(exchange).contextWrite(ReactiveSecurityContextHolder.withAuthentication(authenticationToken));
+								}
+								
+								return chain.filter(exchange);
+							})
+							.switchIfEmpty(Mono.defer(()->chain.filter(exchange)));
+					return chain.filter(exchange);
+				});
+	}
 }

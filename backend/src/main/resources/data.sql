@@ -1,4 +1,4 @@
-INSERT INTO users (id, created_at, created_by, email, password, role, status, updated_at, updated_by, username)
+	INSERT INTO users (id, created_at, created_by, email, password, role, status, updated_at, updated_by, username)
     VALUES (1, NOW(), 'David', 'alice@example.com', '$2b$12$RbvxALl4QRkCNogzsHWUHuvYp0pyaqEGHPD.omwyR1DbmJlPd74fi', 'ADMIN', 'ACTIVE', NOW(), 'system', 'Yann')
     ON CONFLICT (email) DO NOTHING;
 
