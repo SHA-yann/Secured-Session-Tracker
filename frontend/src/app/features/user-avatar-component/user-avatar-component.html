@@ -1,0 +1,10 @@
+<div 
+  class="flex items-center justify-center rounded-full border-white shadow-sm transition-transform duration-200 ease-in-out hover:scale-105"
+  [class]="getSizeClasses()"
+  [style.backgroundColor]="bgColor()"
+>
+  <span class="font-bold tracking-tight antialiased"
+        [class]="getTextSizeClasses()">
+    {{ initials() }}
+  </span>
+</div>

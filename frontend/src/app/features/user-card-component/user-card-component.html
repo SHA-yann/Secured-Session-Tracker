@@ -1,0 +1,20 @@
+<div 
+  (click)="select.emit(user())"
+  [class.opacity-50]="!presenceStore.isOnline()"
+  [class]="isSelected() ? 'bg-blue-600 text-white shadow-lg shadow-blue-100' : 'bg-white hover:bg-slate-50 text-slate-600'"
+  class="group flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 cursor-pointer mb-3 mx-4">
+
+  <app-user-avatar [username]="user().username ?? ''" [size]="'sm'" class="shrink-0"></app-user-avatar>
+
+  <div class="flex-1 min-w-0">
+    <div class="flex items-center gap-2">
+      <p class="text-sm font-bold truncate" [class]="isSelected() ? 'text-white' : 'text-slate-900'">{{ user().username }}</p>
+      @if (presenceStore.isOnline()) {
+        <span class="w-2 h-2 rounded-full bg-emerald-400 ring-4" [class]="isSelected() ? 'ring-blue-500' : 'ring-emerald-50'"></span>
+      }
+    </div>
+    <p class="text-[10px] font-black uppercase tracking-widest opacity-70">{{ user().role }}</p>
+  </div>
+
+  <i class="ri-arrow-right-s-line text-xl transition-transform group-hover:translate-x-1" [class]="isSelected() ? 'text-white' : 'text-slate-300'"></i>
+</div>

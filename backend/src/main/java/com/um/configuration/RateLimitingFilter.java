@@ -1,50 +1,50 @@
 package com.um.configuration;
 
-import java.io.IOException;
-
 import org.springframework.stereotype.Component;
-import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebFilter;
+import org.springframework.web.server.WebFilterChain;
 
 import com.um.service.RateLimitingService;
 
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import reactor.core.publisher.Mono;
+import org.springframework.http.HttpStatus;
 
 @Component
-public class RateLimitingFilter extends OncePerRequestFilter{
+public class RateLimitingFilter implements WebFilter{
 
 	RateLimitingFilter(RateLimitingService rateLimitingService) {
 		this.rateLimitingService = rateLimitingService;
 	}
 
 	private RateLimitingService rateLimitingService ;
-	
+
 	@Override
-	protected void doFilterInternal(HttpServletRequest request,
-									HttpServletResponse response,
-									FilterChain filterChain) throws ServletException,IOException{
-		
-		String path = request.getRequestURI();
+	public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+		String path = exchange.getRequest().getURI().getPath();
 
 		if(path.startsWith("/swagger-ui") || path.startsWith("/v3/api-docs") || path.startsWith("/actuator") || path.startsWith("/favicon.ico")) {
-			filterChain.doFilter(request, response);
-			return;
+			
+			return chain.filter(exchange);
 		}
 		
 		RateLimitingPlan plan = rateLimitingService.determinePlan(path, 
-																request.getHeader("Authorization"),
-																request.getHeader("X-API-Key"));
-		String clientIP = request.getRemoteAddr();
+																exchange.getRequest().getHeaders().getFirst("Authorization"),
+																exchange.getRequest().getHeaders().getFirst("X-API-Key"));
+		
+		String clientIP=exchange.getRequest().getHeaders().getFirst("X-Forwarded-For");
+		if(clientIP == null)
+			clientIP = exchange.getRequest().getRemoteAddress().getAddress().getHostAddress();
+		
 		String key = clientIP + ":" + plan.name();
 		
 		if(rateLimitingService.resolveBucket(key,plan).tryConsume(1)) {
-			filterChain.doFilter(request, response);
+			return chain.filter(exchange);
 		}else {
-			response.setStatus(429);
-			response.setContentType("application/json");
-			response.getWriter().write(String.format("{\"error\":\"Trop de requêtes!...Réessayez dans 1 minute.\"}", plan.name()));
+			exchange.getResponse().setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
+			exchange.getResponse().setComplete();
 		}
+		
+		return chain.filter(exchange);
 	}
 }

@@ -1,0 +1,21 @@
+
+.animate-in{
+    animation: slidein 1s ease-out forwards;
+}
+
+@keyframes slideIn {
+    from{
+        transform:translateX(100%);
+        opacity:0;
+    }
+    to{
+        transform:translateX(0);
+        opacity:1;
+    }
+}
+
+:host{
+    display:block;
+    position:relative;
+    z-index:9999;
+}

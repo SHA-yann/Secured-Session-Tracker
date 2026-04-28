@@ -1,0 +1,102 @@
+<div class="flex flex-col min-h-full bg-slate-50/50 rounded-[2rem] shadow-2xl shadow-slate-200/50 overflow-hidden border-none">
+
+  <div class="p-6 md:p-10 bg-white shadow-sm">
+    <div class="flex flex-col lg:flex-row items-center gap-6 md:gap-10">
+
+      <div class="shrink-0 transform transition-transform hover:scale-105 duration-300">
+        <app-user-avatar 
+          [username]="user().username || ''" 
+          [size]="'xl'" 
+          class="shadow-2xl shadow-blue-500/20 rounded-3xl">
+        </app-user-avatar>
+      </div>
+
+      <div class="flex-1 w-full">
+        <app-user-header 
+          [username]="user().username ?? ''" [role]="user().role!" 
+          [isSelf]="isSelf()" [isEditing]="isEditing()"
+          (editToggle)="toggleEdit()" (save)="saveChanges()" 
+          [email]="user().email ?? ''" [status]="user().status!">
+        </app-user-header>
+      </div>
+    </div>
+  </div>
+
+  <div class="p-4 md:p-6">
+    <app-user-stats 
+      [userId]="user().id!" [status]="user().status!" 
+      [createdBy]="user().createdBy ?? ''" [updatedBy]="user().updatedBy ?? ''"
+      [createdAt]="user().createdAt ?? ''" [updatedAt]="user().createdAt ?? ''">
+    </app-user-stats>
+  </div>
+
+  <div class="flex-1 px-4 md:px-8 pb-8">
+    <div class="bg-white rounded-3xl p-6 md:p-10 shadow-sm h-full border-none transition-all">
+
+      <h3 class="text-slate-800 font-black text-xs uppercase tracking-[0.2em] mb-10 flex items-center gap-3">
+        <span class="w-1.5 h-1.5 bg-blue-600 rounded-full animate-pulse"></span>
+        Profile details
+      </h3>
+
+      <form [formGroup]="profileForm" ngNativeValidate class="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-10" >
+
+        <div class="flex flex-col gap-3 group">
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 transition-colors group-focus-within:text-blue-600">
+            Contact address
+          </label>
+          @if (isEditing()) {
+            <input formControlName="email" type="email" 
+              class="w-full px-5 py-4 bg-slate-50 rounded-2xl border-2 border-transparent focus:bg-white focus:border-blue-500/20 focus:ring-4 focus:ring-blue-500/5 transition-all outline-none text-slate-700 font-bold shadow-inner">
+          } @else {
+            <div class="py-3 px-1 text-slate-700 font-bold text-lg decoration-blue-500/30 underline-offset-8 underline decoration-2 transition-all">
+              {{ user().email }}
+            </div>
+          }
+        </div>
+
+        <div class="flex flex-col gap-3 group">
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 transition-colors group-focus-within:text-blue-600">
+            Access level
+          </label>
+          @if (isEditing() && authService.isAdmin()) {
+            <div class="relative">
+              <select formControlName="role" 
+                class="w-full px-5 py-4 bg-slate-50 rounded-2xl border-none focus:ring-4 focus:ring-blue-500/5 outline-none appearance-none font-bold text-slate-700 cursor-pointer shadow-inner">
+                <option value="ROLE_ADMIN">Administrator</option>
+                <option value="ROLE_USER">Standard User</option>
+              </select>
+              <i class="ri-arrow-down-s-line absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
+            </div>
+          } @else {
+            <div class="flex items-center">
+               <span class="px-4 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm font-black uppercase tracking-tighter shadow-sm shadow-blue-100">
+                 {{ user().role }}
+               </span>
+            </div>
+          }
+        </div>
+
+        <div class="lg:col-span-2 mt-6 p-6 bg-slate-50/50 rounded-2xl grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div class="flex flex-col gap-1">
+            <span class="text-[9px] font-black text-slate-400 uppercase">Created By</span>
+            <span class="text-xs text-slate-700 font-bold italic">{{ user().createdBy }}</span>
+          </div>
+          <div class="flex flex-col gap-1">
+            <span class="text-[9px] font-black text-slate-400 uppercase">Created At</span>
+            <span class="text-xs text-slate-700 font-bold">{{ user().createdAt | date:'shortDate' }}</span>
+          </div>
+          <div class="flex flex-col gap-1 md:text-right">
+            <span class="text-[9px] font-black text-slate-400 uppercase">Updated By</span>
+            <span class="text-xs text-slate-700 font-bold italic">{{ user().updatedBy }}</span>
+          </div>
+          <div class="flex flex-col gap-1 md:text-right">
+            <span class="text-[9px] font-black text-slate-400 uppercase">Updated At</span>
+            <span class="text-xs text-slate-700 font-bold">{{ user().updatedAt | date:'medium' }}</span>
+          </div>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>
+
