@@ -25,14 +25,15 @@ export class DashboardComponent implements OnInit{
         const reqParam:GetUserByIdRequestParams={
             id:this.authService.userId()!
         }
-        this.userService.getUserById(reqParam)
+        if(this.authService.isAdmin())
+            this.userService.getUserById(reqParam)
                         .subscribe({
                             next:(found) => {
                                 this.selectedUser.set(found);
                             },
                             error:(err) => console.log('An error occured during retrieval of user information at login',err)
                         });
-        this.presenceStore.init();
+        
     }
 
     UserSelection(user:UserResponse){

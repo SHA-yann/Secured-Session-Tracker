@@ -15,17 +15,17 @@
   </div>
 
   <div class="flex items-center gap-2 md:gap-4">
-    @if(presenceStore.id && presenceStore.isOnline()){
-      <div class="hidden md:flex flex-col items-end">
-        <span class="text-xs font-black text-slate-900">{{ authService.username() }}</span>
-        <span class="text-[9px] px-1.5 bg-slate-100 text-slate-500 rounded font-bold">{{ authService.userPayload()?.Role }}</span>
-      </div>
+    @if(currentUserId() && isAuthenticated()){
+      <app-user-avatar 
+          [username]="auth.username() || ''" 
+          class="shadow-2xl shadow-blue-500/20 rounded-2xl">
+      </app-user-avatar>
     }
 
-    <button (click)="handleAuthAction()" 
+    <button (click)="handleLogAction()" 
       class="px-4 py-2 text-xs font-black uppercase tracking-widest rounded-xl transition-all active:scale-95 shadow-sm"
-      [ngClass]="presenceStore.isOnline() ? 'text-red-500 bg-red-50 hover:bg-red-100' : 'text-white bg-blue-600 hover:bg-blue-700 shadow-blue-200'">
-      {{ presenceStore.isOnline() ? 'Sign out' : 'Sign in' }}
+      [ngClass]="isAuthenticated() ? 'text-red-500 bg-red-50 hover:bg-red-100' : 'text-white bg-blue-600 hover:bg-blue-700 shadow-blue-200'">
+      {{ isAuthenticated() ? 'Sign out' : 'Sign in' }}
     </button>
   </div>
 </nav>

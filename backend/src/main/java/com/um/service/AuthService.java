@@ -21,6 +21,7 @@ import com.um.configuration.JwtProvider;
 import com.um.dto.AuthRequest;
 import com.um.model.RefreshToken;
 import com.um.model.User;
+import com.um.repository.UserRepository;
 
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
@@ -35,7 +36,7 @@ import reactor.core.scheduler.Schedulers;
 public class AuthService {
 
     private final ReactiveAuthenticationManager authenticationManager;
-    private final UserService userService;
+    private final UserRepository userRepo;
     private final MyUserDetailsService myUserDetailsService;
     private final JwtProvider jwtProvider;
     private final RefreshTokenService refreshTokenService;
@@ -48,13 +49,12 @@ public class AuthService {
 
     private static final String REFRESH_COOKIE = "refresh_token";
 
-    public AuthService(ReactiveAuthenticationManager authenticationManager,
-                       UserService userService,
+    public AuthService(ReactiveAuthenticationManager authenticationManager,UserRepository userRepo,
                        JwtProvider jwtProvider,
                        MyUserDetailsService myUserDetailsService,
                        RefreshTokenService refreshTokenService) {
         this.authenticationManager = authenticationManager;
-        this.userService = userService;
+        this.userRepo = userRepo;
         this.jwtProvider = jwtProvider;
         this.myUserDetailsService = myUserDetailsService;
         this.refreshTokenService = refreshTokenService;
@@ -74,7 +74,7 @@ public class AuthService {
     									UserDetails userDetails = (UserDetails) auth.getPrincipal();
     									String accessToken = jwtProvider.generateToken(userDetails);
     									return Mono.fromCallable(() -> 
-    											userService.findByName(auth.getName()))
+    											userRepo.findByUsername(auth.getName()))
        											.subscribeOn(Schedulers.boundedElastic())
     											.flatMap(oP -> Mono.justOrEmpty(oP))
     											//.log("DEBUG_LOGIN")
@@ -140,7 +140,7 @@ public class AuthService {
      */
     @Transactional
     public boolean logout(String username) {
-        Optional<User> oP= userService.findByName(username);
+        Optional<User> oP= userRepo.findByUsername(username);
         if (oP.isPresent()) {
             refreshTokenService.revokeUserTokens(oP.get().getId());
             return true;

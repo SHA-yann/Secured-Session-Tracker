@@ -26,11 +26,13 @@
     <p class="text-[10px] text-gray-400 mt-1">Author : <span class="text-emerald-500">{{ updatedBy() || 'N/A' }}</span></p>
   </div>
 
-  <div class="col-span-1 md:col-span-2 p-3 bg-gray-50 border border-dashed border-gray-200 rounded-xl flex items-center justify-between">
-    <span class="text-[10px] font-mono text-gray-500 uppercase">ID</span>
-    <span class="text-xs font-mono font-bold text-gray-700 bg-white px-2 py-0.5 rounded border border-gray-100 shadow-sm">
-      #{{ userId() }}
-    </span>
-  </div>
+  @if(auth.isAdmin()){
+    <div class="col-span-1 md:col-span-2 p-3 bg-gray-50 border border-dashed border-gray-200 rounded-xl flex items-center justify-between">
+      <span class="text-[10px] font-mono text-gray-500 uppercase">ID</span>
+      <span class="text-xs font-mono font-bold text-gray-700 bg-white px-2 py-0.5 rounded border border-gray-100 shadow-sm">
+        #{{ userId() }}
+      </span>
+    </div>
+  }
 
 </div>

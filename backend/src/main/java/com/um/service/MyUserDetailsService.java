@@ -4,7 +4,6 @@ import org.springframework.security.core.userdetails.ReactiveUserDetailsService;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,17 +20,14 @@ import reactor.core.scheduler.Schedulers;
 @Service
 public class MyUserDetailsService implements ReactiveUserDetailsService {
 
-    private final PasswordEncoder passwordEncoder;
-
     private final UserRepository userRepo;
     /**
      * Constructor injecting UserService dependency.
      *
      * @param userService service to access user data
      */
-    public MyUserDetailsService(UserRepository userRepo, PasswordEncoder passwordEncoder) {
+    public MyUserDetailsService(UserRepository userRepo) {
         this.userRepo = userRepo;
-        this.passwordEncoder = passwordEncoder;
     }
 
     /**

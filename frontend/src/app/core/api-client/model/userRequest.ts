@@ -10,7 +10,7 @@
 
 
 /**
- * Request DTO for creating or updating a user
+ * Request DTO for creating a user
  */
 export interface UserRequest { 
     /**
@@ -42,6 +42,4 @@ export enum StatusEnum {
     Active = 'ACTIVE',
     Inactive = 'INACTIVE'
 };
-
-
 

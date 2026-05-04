@@ -12,10 +12,11 @@ import { AuthService } from '../../core/secure/authService';
   templateUrl: './user-card-component.html'
 })
 export class UserCardComponent {
-  user = input.required<UserResponse>();
-  presenceStore = inject(PresenceStore)
-  private readonly auth = inject(AuthService);
-  select = output<UserResponse>();
-  isSelected = input<boolean>(false);
-  
+  readonly user = input.required<UserResponse>();
+  readonly presenceStore = inject(PresenceStore)
+  readonly auth = inject(AuthService);
+  readonly select = output<UserResponse>();
+  readonly isSelected = input<boolean>(false);
+  readonly id = input.required<number>();
+  isOnLine = computed (() => this.presenceStore.isUserOnline(this.id()));
 }

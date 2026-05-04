@@ -2,7 +2,6 @@ package com.um;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-
 import jakarta.annotation.PostConstruct;
 import reactor.core.publisher.Hooks;
 
@@ -20,6 +19,8 @@ public class BackendApplication {
      */
     public static void main(String[] args) {
         SpringApplication.run(BackendApplication.class, args);
+        //String mdp = new BCryptPasswordEncoder(12).encode("Password123!");
+        //System.out.println("le Hash est:"+mdp);
     }
     
     @PostConstruct

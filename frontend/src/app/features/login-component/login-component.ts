@@ -4,7 +4,6 @@ import { AuthRequest } from '../../core/api-client';
 import { AuthService } from "../../core/secure/authService";
 import { NotificationService } from '../../shared/services/notification-service';
 import { Router } from '@angular/router';
-import { finalize } from 'rxjs';
 @Component({
   selector: 'app-login',
   standalone: true,

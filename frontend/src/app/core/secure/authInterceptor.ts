@@ -19,12 +19,14 @@ export const authInterceptor: HttpInterceptorFn = (req,next) =>{
 
     const authReq= addTokenHeader(req,token);
 
-    return(next(authReq).pipe(catchError((error) =>{
-        if(error instanceof HttpErrorResponse && error.status === 401){
+    return(next(authReq).pipe(catchError((error:HttpErrorResponse) =>{
+        if(error.status === 401 && !req.url.includes('/auth/login') && !req.url.includes('/auth/refresh')){
+            
             
             return handle401Error(authReq,next,authApi,router);
         }
-        
+        let errorMessage = error.error?.message ?? "Unknown User";
+            notify.show(errorMessage,'warning');
         return throwError(() =>error);
     })));
 
@@ -47,9 +49,6 @@ export const authInterceptor: HttpInterceptorFn = (req,next) =>{
                 catchError((err) =>{
                     auth.logout();
                     isRefreshing=false;
-                    const backendMessage = err.error?.message ?? 'User unknown';
-                    notify.show(`${backendMessage}`,'error');
-
                     if(!router.url.includes('/login'))
                         router.navigate(['/login'], {queryParams:{reason:'Refreshing token failed'}});
 

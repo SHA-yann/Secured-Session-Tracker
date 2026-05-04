@@ -1,7 +1,7 @@
-import { CommonModule, DatePipe } from '@angular/common';
-import { Component, computed, input } from '@angular/core';
-import { UserResponse } from '../../core/api-client/model/userResponse';
+import { CommonModule } from '@angular/common';
+import { Component, computed, inject, input } from '@angular/core';
 import { StatusEnum } from '../../core/api-client';
+import { AuthService } from '../../core/secure/authService';
 
 @Component({
   selector: 'app-user-stats',
@@ -16,6 +16,7 @@ export class UserStatsComponent {
   updatedBy = input.required<string>();
   createdAt = input.required<string>();
   updatedAt = input.required<string>();
+  auth = inject(AuthService);
 
   formattedCreation = computed(() => {
     const date = this.createdAt();

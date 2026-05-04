@@ -28,11 +28,11 @@ public class GlobalExceptionHandler {
      * @param ex the exception
      * @return structured error response
      */
-    @ExceptionHandler(UserNotFoundException.class)
-    public Mono<ResponseEntity<ErrorResponse>> handleUserNotFound(UserNotFoundException ex) {
-        ErrorResponse error = new ErrorResponse(HttpStatus.NOT_FOUND.value(),
-        		"No user found with these informations "+ex.getMessage());
-        return Mono.just(new ResponseEntity<>(error, HttpStatus.NOT_FOUND));
+    @ExceptionHandler(RateLimitException.class)
+    public Mono<ResponseEntity<ErrorResponse>> handleRateLimit(RateLimitException ex) {
+        ErrorResponse error = new ErrorResponse(HttpStatus.TOO_MANY_REQUESTS.value(),
+        		"Too many requests, please wait "+ex.getMessage());
+        return Mono.just(new ResponseEntity<>(error, HttpStatus.TOO_MANY_REQUESTS));
     }
 
     /**

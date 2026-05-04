@@ -5,6 +5,7 @@ import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 
+import com.um.Exceptions.RateLimitException;
 import com.um.service.RateLimitingService;
 
 import reactor.core.publisher.Mono;
@@ -23,7 +24,7 @@ public class RateLimitingFilter implements WebFilter{
 	public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
 		String path = exchange.getRequest().getURI().getPath();
 
-		if(path.startsWith("/swagger-ui") || path.startsWith("/v3/api-docs") || path.startsWith("/actuator") || path.startsWith("/favicon.ico")) {
+		if(path.startsWith("/swagger-ui") || path.startsWith("/v3/api-docs") || path.startsWith("/actuator") || path.startsWith("/notifications") || path.startsWith("/favicon.ico")) {
 			
 			return chain.filter(exchange);
 		}
@@ -33,18 +34,17 @@ public class RateLimitingFilter implements WebFilter{
 																exchange.getRequest().getHeaders().getFirst("X-API-Key"));
 		
 		String clientIP=exchange.getRequest().getHeaders().getFirst("X-Forwarded-For");
-		if(clientIP == null)
+		
+		if(clientIP == null && exchange.getRequest().getRemoteAddress() != null)
 			clientIP = exchange.getRequest().getRemoteAddress().getAddress().getHostAddress();
 		
-		String key = clientIP + ":" + plan.name();
+		String key = (clientIP != null ? clientIP:"unknown") + ":" + plan.name();
 		
 		if(rateLimitingService.resolveBucket(key,plan).tryConsume(1)) {
 			return chain.filter(exchange);
 		}else {
 			exchange.getResponse().setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
-			exchange.getResponse().setComplete();
-		}
-		
-		return chain.filter(exchange);
+			return Mono.error(new RateLimitException("Too many requests, please wait"));
+		}		
 	}
 }

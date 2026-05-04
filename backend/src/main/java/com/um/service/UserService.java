@@ -1,7 +1,5 @@
 package com.um.service;
 
-import java.util.Optional;
-
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -9,7 +7,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -108,6 +105,15 @@ public class UserService {
 				}).subscribeOn(Schedulers.boundedElastic());
 	
     }
+    
+    public Mono<User> getUserByUsername(String name){
+    	
+    	return Mono.fromCallable(() -> {
+			
+    			return userRepository.findByUsername(name)
+    						.orElseThrow(() -> new UserNotFoundException("User with name " +name+ " not found"));
+    			}).subscribeOn(Schedulers.boundedElastic());
+    }
 
     /**
      * Retrieves a user by email.
@@ -136,6 +142,7 @@ public class UserService {
      * @throws UserNotFoundException if user not found
      */
     @Transactional
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public Mono<User> updateUser(Long id, UpdateRequest update, String author) {
         
     	return ReactiveSecurityContextHolder.getContext()
@@ -194,18 +201,6 @@ public class UserService {
 									.subscribeOn(Schedulers.boundedElastic());
 				    }).then();
         
-    }
-
-    /**
-     * Finds a user by username.
-     *
-     * @param username username
-     * @return Optional containing the user
-     */
-    @Transactional(readOnly = true)
-    public Optional<User> findByName(String username) {
-        return Optional.of(userRepository.findByUsername(username)
-        		.orElseThrow(() -> new UserNotFoundException("User not found")));
     }
 
     /**

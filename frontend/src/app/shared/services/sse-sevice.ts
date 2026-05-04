@@ -3,6 +3,7 @@ import { fetchEventSource } from "@microsoft/fetch-event-source"
 import { Subject } from "rxjs";
 
  interface PresenceDelta{
+    username:string;
     userId:number;
     online:boolean;
  }
@@ -31,13 +32,13 @@ export class SseService {
 
     async connect(url: string, token: string, abortController: AbortController){
 
-        await fetchEventSource(url,{
+        fetchEventSource(url,{
             method:'GET',
             headers:{'Authorization':`Bearer ${token}`,
                     'Accept':'text/event-stream'
             },
             signal: abortController.signal,
-            async onopen(response){
+            onopen: async (response) =>{
                 if(response.ok && response.headers.get('content-type')?.includes('text/event-stream')){
                     console.log("SSE flow opened");
                     return;
@@ -51,9 +52,10 @@ export class SseService {
             onmessage: (msg) => {
                 if(msg.event === 'presence-update'){
                     this.zone.run(() => {
-                        const [userid,status] = msg.data.split(":");
-                    this.presenceSubject.next({
-                        userId:+userid,
+                        const [name,id,status] = msg.data.split(":");
+                        this.presenceSubject.next({
+                        username:name,
+                        userId:+id,
                         online: status === 'CONNECTED'
                         });
                     });

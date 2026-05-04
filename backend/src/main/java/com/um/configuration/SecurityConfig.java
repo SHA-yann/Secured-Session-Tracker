@@ -13,7 +13,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ReactiveAuthenticationManager;
 import org.springframework.security.authentication.UserDetailsRepositoryReactiveAuthenticationManager;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
@@ -90,10 +89,10 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsSource))
             .csrf(ServerHttpSecurity.CsrfSpec::disable)
             .authorizeExchange(auth -> auth
-                .pathMatchers("/notifications/stream","/auth/login","/auth/refresh","/swagger-ui/**","/v3/api-docs/**","/webjars/**","/actuator/prometheus","/actuator/health/**","/actuator/info").permitAll()
-                .pathMatchers(HttpMethod.POST, "/users").hasAnyAuthority("ROLE_ADMIN","ROLE_USER")
-                .pathMatchers(HttpMethod.GET, "/users","/users/**").hasAuthority("ROLE_ADMIN")
-                .pathMatchers(HttpMethod.PUT, "/users/**").hasAuthority("ROLE_ADMIN")
+                .pathMatchers("/notifications/**","/auth/login","/auth/refresh","/swagger-ui/**","/v3/api-docs/**","/webjars/**","/actuator/prometheus","/actuator/health/**","/actuator/info").permitAll()
+                .pathMatchers(HttpMethod.POST, "/users").hasAuthority("ROLE_ADMIN")
+                .pathMatchers(HttpMethod.GET, "/users","/users/**").hasAnyAuthority("ROLE_ADMIN","ROLE_USER")
+                .pathMatchers(HttpMethod.PUT, "/users/**").hasAnyAuthority("ROLE_ADMIN","ROLE_USER")
                 .pathMatchers(HttpMethod.DELETE, "/users/**").hasAuthority("ROLE_ADMIN")
                 .anyExchange().authenticated()
             )
