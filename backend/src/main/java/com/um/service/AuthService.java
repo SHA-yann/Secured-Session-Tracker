@@ -1,8 +1,6 @@
 package com.um.service;
 
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -67,12 +65,12 @@ public class AuthService {
      * @return AuthResponse containing JWT and refresh cookie
      */
     @Transactional
-    public Mono<Map<Integer,Object>> login(AuthRequest request) {
+    public Mono<AuthResult> login(AuthRequest request) {
     	
     	return authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()))
     								.flatMap(auth ->{
     									UserDetails userDetails = (UserDetails) auth.getPrincipal();
-    									String accessToken = jwtProvider.generateToken(userDetails);
+    									String token = jwtProvider.generateToken(userDetails);
     									return Mono.fromCallable(() -> 
     											userRepo.findByUsername(auth.getName()))
        											.subscribeOn(Schedulers.boundedElastic())
@@ -84,10 +82,7 @@ public class AuthService {
     														.map( rt -> {
 			    												int maxAge = (int) (rt.getExpiresAt().getEpochSecond() - Instant.now().getEpochSecond());
 			    												ResponseCookie refreshCookie = CookieProvider.createCookie(REFRESH_COOKIE, rt.getToken(), cookieDomain, cookieSecure, maxAge);
-			    												var res = new HashMap<Integer,Object>();
-			    										        res.put(2, refreshCookie);
-			    										        res.put(1, accessToken);
-			    										        return res;
+			    										        return new AuthResult(token, refreshCookie);
     														});
     											});
     											
@@ -102,7 +97,7 @@ public class AuthService {
      * @return AuthResponse with new JWT and refresh cookie
      */
     @Transactional(readOnly = true)
-    public Mono<Map<Integer,Object>> refresh(String rToken) {
+    public Mono<AuthResult> refresh(String rToken) {
     	
         if (rToken == null || rToken.isBlank()) 
         	return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,"Missing Refresh token"));
@@ -123,10 +118,7 @@ public class AuthService {
         						String newAccess = jwtProvider.generateToken(uD);
 		        			    int maxAge = (int) (nextRt.getExpiresAt().getEpochSecond() - Instant.now().getEpochSecond());
 						        ResponseCookie newRefreshCookie = CookieProvider.createCookie(REFRESH_COOKIE, nextRt.getToken(), cookieDomain, cookieSecure, maxAge);
-						        Map<Integer,Object> res = new HashMap<Integer,Object>();
-						        res.put(2, newRefreshCookie);
-						        res.put(1, newAccess);
-						        return res;
+						        return new AuthResult(newAccess, newRefreshCookie);
         					  	});
         		  });
         	
@@ -148,3 +140,5 @@ public class AuthService {
         return false;
     }
 }
+
+

@@ -3,9 +3,9 @@ import { fetchEventSource } from "@microsoft/fetch-event-source"
 import { Subject } from "rxjs";
 
  interface PresenceDelta{
-    username:string;
     userId:number;
-    online:boolean;
+    username:string;
+    status: 'CONNECTED'|'DISCONNECTED';
  }
 
  export class FatalError extends Error{
@@ -52,12 +52,16 @@ export class SseService {
             onmessage: (msg) => {
                 if(msg.event === 'presence-update'){
                     this.zone.run(() => {
-                        const [name,id,status] = msg.data.split(":");
-                        this.presenceSubject.next({
-                        username:name,
-                        userId:+id,
-                        online: status === 'CONNECTED'
+                        try{
+                            const serverEvent = JSON.parse(msg.data)
+                            this.presenceSubject.next({
+                            userId:serverEvent.Id,
+                            username:serverEvent.name,
+                            status: serverEvent.status
                         });
+                        }catch(error){
+                        console.error("Error while parsing sse payload :",error);
+                        }
                     });
                 }
             },

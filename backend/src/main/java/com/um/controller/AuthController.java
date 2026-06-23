@@ -67,16 +67,9 @@ public class AuthController {
             @RequestBody AuthRequest request,
             @Parameter(hidden = true) ServerWebExchange exchange) {
 
-        	return authService.login(request).map(res -> {String token = (String)res.get(1);
-														ResponseCookie cookie = (ResponseCookie)res.get(2);
-														exchange.getResponse().addCookie(cookie);
-											            
-											        	return ResponseEntity.ok()
-																 .body(new AuthResponse(token)
-																);
-														}
-        	
-        										)
+        	return authService.login(request).map(res -> {exchange.getResponse().addCookie(res.cookie());
+											        	return ResponseEntity.ok(new AuthResponse(res.token()));
+														})
         										.onErrorResume(e -> Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED)
         																.build()));
         	
@@ -104,12 +97,8 @@ public class AuthController {
     	}
     	
         return authService.refresh(refreshToken)
-						  .map(res -> {String token = (String)res.get(1);
-							ResponseCookie cookie = (ResponseCookie)res.get(2);
-							exchange.getResponse().addCookie(cookie);
-							return ResponseEntity.ok()
-		        					 .body(new AuthResponse(token)
-		        						);
+						  .map(res -> {exchange.getResponse().addCookie(res.cookie());
+							return ResponseEntity.ok(new AuthResponse(res.token()));
 							});
         		
     }

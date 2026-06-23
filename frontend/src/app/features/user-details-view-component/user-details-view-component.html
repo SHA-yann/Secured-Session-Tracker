@@ -24,7 +24,7 @@
 
   <div class="p-4 md:p-6">
     <app-user-stats 
-      [userId]="user().id!" [status]="user().status!" 
+      [userId]="user().id!" [status]="user().status!" [isSelf]="isSelf()"
       [createdBy]="user().createdBy ?? ''" [updatedBy]="user().updatedBy ?? ''"
       [createdAt]="user().createdAt ?? ''" [updatedAt]="user().createdAt ?? ''">
     </app-user-stats>

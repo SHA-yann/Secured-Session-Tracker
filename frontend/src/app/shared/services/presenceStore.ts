@@ -16,7 +16,7 @@ export class PresenceStore {
     private readonly http = inject(HttpClient);
 
     private isInitialized = false;
-    private readonly _presence= signal<Record<string,boolean>>({});
+    private readonly _presence= signal<Record<number,boolean>>({});
     readonly presence = this._presence.asReadonly();
     private readonly _lastEvent = signal<string | null>(null);
     readonly lastEvent = this._lastEvent.asReadonly();
@@ -30,22 +30,23 @@ export class PresenceStore {
     setupVisibilityListener(){
         document.addEventListener('visibilitychange',
             () => {
+                console.log("changement de visibilité dectecté");
                 if(document.visibilityState === 'visible'){
                     this.http.get<string[]>(`${env.backUrl}/notifications/onlineList`)
                         .subscribe(users => {
-                            const state : Record<string,boolean> = {};
+                            const state : Record<number,boolean> = {};
                             users.forEach(u => {
-                                const id = u.split(':')[0];
-                                if(id)
-                                    state[id] = true;
+                                const parts = u.split(':');
+                                if(parts[0])
+                                    state[Number(parts[0])] = true;
                             });
                             this._presence.set(state);
-                        })
+                        });
                 }
-        })
+        });
     }
 
-    isUserOnline(id:number) {
+    isUserOnline(id:number): boolean {
         console.log('voilà ce que retourne le this.presence()',this.presence());
 
         return !!this.presence()[id];
@@ -54,28 +55,28 @@ export class PresenceStore {
     init(): void{
         if(this.isInitialized)
             return;
-
         const token=this.auth.getToken();
         if(token && !this.abortController){
             this.isInitialized = true;
-        this.abortController = new AbortController();
-        this.sseService.connect(`${env.backUrl}/notifications/stream`,token,this.abortController);
-        this.sseService.presence$.subscribe(delta => {
-            this.updatePresence(delta.username, delta.userId, delta.online);
-        });
-        this.destroyRef.onDestroy(() => this.disconnect());
+            this.abortController = new AbortController();
+            this.sseService.connect(`${env.backUrl}/notifications/stream`,token,this.abortController);
+            this.sseService.presence$.subscribe(delta => {
+                const isOnline = delta.status === 'CONNECTED'
+                this.updatePresence(delta.username, delta.userId, isOnline);
+            });
+            this.destroyRef.onDestroy(() => this.disconnect());
         }
     }
 
     private updatePresence(username:string, userId:number, isOnline:boolean){
         this._presence.update(current =>{
+            const next ={...current};
             if(isOnline)
-                return{...current,[userId]:true};
+                next[userId] = true;
             else{
-                const next ={...current};
                 delete next[userId];
-                return next;
             }
+            return next;
         });
         this._lastEvent.set(`${username} is now ${isOnline ? 'Online': 'Offline'}`);
     }

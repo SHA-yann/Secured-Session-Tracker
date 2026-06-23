@@ -26,13 +26,30 @@
     <p class="text-[10px] text-gray-400 mt-1">Author : <span class="text-emerald-500">{{ updatedBy() || 'N/A' }}</span></p>
   </div>
 
-  @if(auth.isAdmin()){
+  @if(auth.isAdmin() || isSelf()){
     <div class="col-span-1 md:col-span-2 p-3 bg-gray-50 border border-dashed border-gray-200 rounded-xl flex items-center justify-between">
-      <span class="text-[10px] font-mono text-gray-500 uppercase">ID</span>
-      <span class="text-xs font-mono font-bold text-gray-700 bg-white px-2 py-0.5 rounded border border-gray-100 shadow-sm">
+      <div class="flex items-center gap-3">
+        <span class="text-[10px] font-mono text-gray-500 uppercase">UserID</span>
+        <span class="text-xs font-mono font-bold text-gray-700 bg-white px-2 py-0.5 rounded border border-gray-100 shadow-sm">
         #{{ userId() }}
-      </span>
-    </div>
+        </span>
+      </div>
+
+      @if (auth.isAdmin() && !status().startsWith('IN') ) {
+        <button (click)="onDisableUser(userId())" [disabled]="isProcessing()"
+        class="text-[10px] uppercase font-bold text-red-600 hover:text-red-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1">
+
+        @if (isProcessing()) {
+          <span class="animate-pulse">Processing...</span>
+        } @else {
+          <span>Disable</span>
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636" />
+          </svg>
+        }
+        </button>
+  }
+</div>
   }
 
 </div>

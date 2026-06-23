@@ -1,4 +1,4 @@
-import { Component, inject, output, signal } from '@angular/core';
+import { Component, HostListener, inject, output, signal } from '@angular/core';
 import { RegisterRequestParams, RoleEnum, StatusEnum, UsersApiService } from '../../core/api-client';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 @Component({
@@ -15,10 +15,15 @@ export class UserCreateComponent {
 
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly userApi = inject(UsersApiService);
-  close = output<void>();
+  closed = output<void>();
   userCreated = output<void>();
 
   isSubmitting = signal(false);
+
+  @HostListener('document:keydown.escape')
+  onKeydownHandler():void{
+    this.close()
+  }
 
   userForm = this.fb.group({
     username:['',[
@@ -39,7 +44,7 @@ export class UserCreateComponent {
       this.userApi.register(params).subscribe({
         next:() => {
           this.userCreated.emit();
-          this.close.emit();
+          this.close();
         },
         error:(err) =>{
           console.error('Error while creating user',err);
@@ -47,5 +52,9 @@ export class UserCreateComponent {
         }
       });
     }
+  }
+
+  close():void{
+    this.closed.emit();
   }
 }

@@ -1,8 +1,8 @@
 import { computed, inject, Injectable, signal } from "@angular/core";
 import { jwtDecode } from 'jwt-decode';
 import { AuthenticationApiService } from "../api-client/api/api";
-import { AuthRequest, StatusEnum } from "../api-client";
-import { tap } from "rxjs";
+import { AuthRequest } from "../api-client";
+import { BehaviorSubject, tap } from "rxjs";
 
 export interface TokenPayload {
     sub: string; // username
@@ -17,6 +17,7 @@ export interface TokenPayload {
 })
 export class AuthService{
 
+    private userSubject = new BehaviorSubject<any|null>(null);
     private readonly authApi = inject(AuthenticationApiService);   
     private readonly _token = signal<string | null>(localStorage.getItem('jwt_token'));
     
@@ -35,6 +36,7 @@ export class AuthService{
     });
 
     readonly username = computed(() => this.userPayload()?.sub ?? null);
+    readonly user$ = this.userSubject.asObservable();
     readonly userId = computed(() => this.userPayload()?.ID ?? null);
     readonly isAdmin = computed(() => this.userPayload()?.Role.includes('ROLE_ADMIN') || false);
     

@@ -1,12 +1,16 @@
-<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 bg-slate-900/60 backdrop-blur-sm">
 
-  <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-200">
+  <div class="bg-white w-full max-w-lg flex flex-col rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in transform transition-all duration-200">
 
-    <div class="px-6 py-4 flex justify-between items-center bg-slate-50/50">
+    <div class="px-6 py-4 flex justify-between items-center shrink-0">
       <h2 class="text-xl font-bold text-slate-800">Add a user</h2>
-      <button (click)="close.emit()" class="text-slate-400 hover:text-slate-600 transition-colors">
+      <button (click)="close()" class="text-slate-400 hover:text-slate-600 transition-colors">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
+    </div>
+
+    <div class="p-6 overflow-y-auto max-h-[70vh] custom-scrollbar">
+      <ng-content></ng-content>
     </div>
 
     <form [formGroup]="userForm" (ngSubmit)="onSubmit()" class="p-6 space-y-4">
@@ -54,7 +58,7 @@
       </div>
 
       <div class="flex gap-3 pt-4">
-        <button type="button" (click)="close.emit()" 
+        <button type="button" (click)="close()" 
                 class="flex-1 py-2 font-semibold text-slate-500 hover:bg-slate-100 rounded-xl transition-all">
           Cancel
         </button>

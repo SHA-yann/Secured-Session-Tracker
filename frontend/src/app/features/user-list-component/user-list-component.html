@@ -17,7 +17,7 @@
       </button>
       @if(isCreateModalOpen()){
         <app-user-create-component
-          (close)="isCreateModalOpen.set(false)"
+          (closed)="isCreateModalOpen.set(false)"
           (userCreated)="handleUserCreated()">
         </app-user-create-component>
       }
