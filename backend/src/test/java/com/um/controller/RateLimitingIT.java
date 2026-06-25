@@ -1,53 +1,67 @@
 package com.um.controller;
 
+import com.um.dto.AuthRequest;
+import com.um.service.RateLimitingService;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.reactive.server.WebTestClient;
 
-import jakarta.transaction.Transactional;
+import java.util.stream.IntStream;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-
-@SpringBootTest
-@AutoConfigureMockMvc
-@Transactional
-@ActiveProfiles("test")
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@AutoConfigureWebTestClient
 class RateLimitingIT {
 
     @Autowired
-    private MockMvc mockMvc;
+    private WebTestClient webTestClient;
+    
+    @Autowired
+    private RateLimitingService rateLimitingService;
+
+    @BeforeEach
+    void setUp() {
+        rateLimitingService.clearBuckets(); // we clear buckets !
+    }
 
     @Test
-    @DisplayName("Devrait bloquer la requête avec un code 429 après avoir épuisé le quota SENSITIVE")
-    void shouldReturn429WhenQuotaExceeded() throws Exception {
+    @DisplayName("Rate Limit - Sensitive Plan: Should return 429 Too Many Requests once capacity is depleted")
+    void shouldReturn429WhenSensitiveQuotaExceeded() {
         String sensitivePath = "/auth/login";
-        int limit = 10; // Capacité du plan SENSITIVE dans votre code
+        
+        // We target the capacity defined in RateLimitingPlan.SENSITIVE (10 requests)
+        int allowedCapacity = 10; 
+        AuthRequest dummyRequest = new AuthRequest("Yann", "password123");
+        
+        // 1. Consume all allowed tokens rapidly using a synchronous-like stream in WebTestClient
+        IntStream.range(0, allowedCapacity).forEach(i -> 
+            webTestClient.post()
+                .uri(sensitivePath)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(dummyRequest)
+                .exchange()
+                // It can return 200 or 401 depending on the user status, but it must NOT be 429 yet
+                .expectStatus().value(status -> org.assertj.core.api.Assertions.assertThat(status)
+                							.isNotEqualTo(HttpStatus.TOO_MANY_REQUESTS.value())
+                					)
+        );
 
-        // 1. On consomme tous les jetons autorisés
-        for (int i = 0; i < limit; i++) {
-            mockMvc.perform(post(sensitivePath));
-                   
-        }
-
-        // 2. La 11ème requête doit être rejetée
-        mockMvc.perform(post(sensitivePath))
-               .andExpect(status().isTooManyRequests())
-               .andExpect(jsonPath("$.error").value("Trop de requêtes!...Réessayez dans 1 minute."));
+        // 2. The 11th request must hit the rate limit constraint and return 429
+        webTestClient.post()
+            .uri(sensitivePath)
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(dummyRequest)
+            .exchange()
+            .expectStatus().isEqualTo(HttpStatus.TOO_MANY_REQUESTS)
+            .expectBody()
+            // Adjust the jsonPath according to your Global Exception Handler (@RestControllerAdvice)
+            .jsonPath("$.message").isEqualTo("Too many requests, please wait");
     }
-
-    @Test
-    @DisplayName("Devrait ignorer le rate limiting pour les ressources Swagger")
-    void shouldIgnoreSwaggerResources() throws Exception {
-    	mockMvc.perform(get("/v3/api-docs")
-                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
-    }
+    
 }

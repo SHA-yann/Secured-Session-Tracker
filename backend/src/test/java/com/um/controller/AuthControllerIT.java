@@ -1,130 +1,145 @@
 package com.um.controller;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.reactive.server.WebTestClient;
 
-import com.jayway.jsonpath.JsonPath;
+import com.github.dockerjava.api.model.AuthResponse;
+import com.um.dto.AuthRequest;
 import com.um.model.Role;
 import com.um.model.Status;
 import com.um.model.User;
 import com.um.repository.UserRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@Transactional
-@ActiveProfiles("test")
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@AutoConfigureWebTestClient
 class AuthControllerIT {
 
     @Autowired
-    private MockMvc mockMvc;
-    
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    private WebTestClient webTestClient;
 
     @Autowired
     private UserRepository userRepository;
-    
-    @BeforeEach
-    void init() {
-        // Clean database before each test
-    	userRepository.deleteAll();
 
-        // Create a test user and set authentication context
-        User user = new User("Yann",passwordEncoder.encode("password123")
-        		,"yannsteve@gmail.com",Role.ADMIN,Status.ACTIVE);
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+    
+    private static final String REFRESH_TOKEN_COOKIE = "refresh_token";
+
+    @BeforeEach
+    void setUp() {
+        userRepository.deleteAll();
+        User user = new User("Yann", passwordEncoder.encode("password123"), "yannsteve@gmail.com", Role.ADMIN, Status.ACTIVE);
         user.setCreatedBy("System");
-        user.setUpdatedBy("David");
+        user.setUpdatedBy("System");
         userRepository.save(user);
         
-        
-        
     }
 
-    // -------------------- LOGIN --------------------
     @Test
-    void shouldReturnAccessToken_AndRefreshCookie() throws Exception {
-        // Test login endpoint returns JWT access token and HttpOnly refresh cookie
-        mockMvc.perform(post("/auth/login")
+    @DisplayName("Login Success: Should return Access Token and HttpOnly Refresh Cookie")
+    void login_Success_ReturnsTokenAndCookie() {
+        AuthRequest request = new AuthRequest("Yann", "password123");
+
+        webTestClient.post().uri("/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"Yann\",\"password\":\"password123\"}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").exists())
-                .andExpect(cookie().exists("refresh_token"))
-                .andExpect(cookie().httpOnly("refresh_token", true));
+                .bodyValue(request)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.accessToken").exists()
+                .consumeWith(result -> {
+                    var cookie = result.getResponseHeaders().getFirst("Set-Cookie");
+                    assertThat(cookie).contains(REFRESH_TOKEN_COOKIE);
+                    assertThat(cookie).contains("HttpOnly");
+                });
     }
 
-    // -------------------- REFRESH TOKEN --------------------
     @Test
-    void refresh_should_rotate_and_issueNewToken() throws Exception {
-        // Perform login to get refresh token cookie
-        var loginResult = mockMvc.perform(post("/auth/login")
-        		.contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"Yann\",\"password\":\"password123\"}"))
-                .andExpect(status().isOk())
-                .andReturn();
+    @DisplayName("Login Invalid: Should return 401 Unauthorized for wrong password")
+    void login_InvalidPassword_Returns401() {
+        AuthRequest request = new AuthRequest("Yann", "wrong_password");
 
-        var refreshCookie = loginResult.getResponse()   .getCookie("refresh_token");
-
-        // Use refresh endpoint to get new access token and rotated refresh cookie
-        mockMvc.perform(post("/auth/refresh")
-        		.cookie(refreshCookie))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").exists())
-                .andExpect(cookie().exists("refresh_token"));
-    }
-
-    // -------------------- LOGOUT --------------------
-    @Test
-    void logout_shouldClear_refreshCookie() throws Exception {
-        // Perform login to get refresh token cookie
-        var loginResult = mockMvc.perform(post("/auth/login")
-        		.contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"Yann\",\"password\":\"password123\"}"))
-                .andExpect(status().isOk())
-                .andReturn();
-
-        var json=loginResult.getResponse().getContentAsString();
-        var accessToken= JsonPath.read(json, "$.accessToken");
-        var refreshCookie = loginResult.getResponse().getCookie("refresh_token");
-
-        // Call logout and validate that refresh cookie is cleared
-        mockMvc.perform(post("/auth/logout")
-        		.header("Authorization", "Bearer "+accessToken)
-        		.contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"Yann\"}")
-                .cookie(refreshCookie))
-                .andExpect(status().isNoContent())
-                .andExpect(cookie().maxAge("refresh_token", 0));
-    }
-
-    // -------------------- INVALID LOGIN --------------------
-    @Test
-    void login_withWrongPassword_should_return401() throws Exception {
-        // Validate login failure with incorrect password
-        mockMvc.perform(post("/auth/login")
+        webTestClient.post().uri("/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"Yann\",\"password\":\"plainWrong\"}"))
-                .andExpect(status().isUnauthorized());
+                .bodyValue(request)
+                .exchange()
+                .expectStatus().isUnauthorized();
     }
 
-    // -------------------- REFRESH WITHOUT COOKIE --------------------
     @Test
-    void noCookie_should_return401() throws Exception {
-        // Validate refresh request fails when no cookie is provided
-        mockMvc.perform(post("/auth/refresh"))
-                .andExpect(status().isUnauthorized());
+    @DisplayName("Refresh Success: Should rotate token and return new access token")
+    void refresh_Success_ReturnsNewToken() {
+        // 1. Get initial cookie
+        var loginResponse = webTestClient.post().uri("/auth/login")
+                .bodyValue(new AuthRequest("Yann", "password123"))
+                .exchange()
+                .expectStatus().isOk()
+                .returnResult(AuthResponse.class);
+        
+        var cookie = loginResponse.getResponseCookies().getFirst(REFRESH_TOKEN_COOKIE);
+
+        // 2. Perform refresh
+        webTestClient.post().uri("/auth/refresh")
+                .cookie(REFRESH_TOKEN_COOKIE, cookie.getValue())
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.accessToken").exists();
+    }
+
+    @Test
+    @DisplayName("Refresh Without Token: Should return 401 Unauthorized")
+    void refresh_NoCookie_Returns401() {
+        webTestClient.post().uri("/auth/refresh")
+                .exchange()
+                .expectStatus().isUnauthorized();
+    }
+
+    @Test
+    @DisplayName("Logout - Success: Should clear client cookie and return 204 when valid cookie is provided")
+    void logout_ShouldClearCookieAndReturn204_WhenValidCookieProvided() {
+        // Step 1: Perform a valid login to capture a real system-generated refresh token cookie
+        var loginResult = webTestClient.post()
+                .uri("/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(new AuthRequest("Yann", "password123"))
+                .exchange()
+                .expectStatus().isOk()
+                .returnResult(AuthResponse.class);
+
+        var refreshCookie = loginResult.getResponseCookies().getFirst("refresh_token");
+        assert refreshCookie != null : "Refresh token cookie must be present upon login success";
+
+        // Step 2: Execute logout using the extracted cookie
+        webTestClient.post()
+                .uri("/auth/logout")
+                .cookie("refresh_token", refreshCookie.getValue())
+                .exchange()
+                .expectStatus().isNoContent() // Expect 204 No Content
+                .expectHeader().valueEquals(HttpHeaders.SET_COOKIE, 
+                        "refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0");
+    }
+
+    @Test
+    @DisplayName("Logout - Security: Should still clear client cookie and return 204 when cookie is invalid or missing")
+    void logout_ShouldStillReturn204_WhenCookieIsInvalidOrMissing() {
+        // Sending an invalid/expired token or completely omitting it 
+        // Must yield the exact same response to prevent user enumeration attacks
+        webTestClient.post()
+                .uri("/auth/logout")
+                .cookie("refresh_token", "invalid-or-already-evicted-token")
+                .exchange()
+                .expectStatus().isNoContent() // Security constraint: Always return 204
+                .expectHeader().valueEquals(HttpHeaders.SET_COOKIE, 
+                        "refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0");
     }
 }

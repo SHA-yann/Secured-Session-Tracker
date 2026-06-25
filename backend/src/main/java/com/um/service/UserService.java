@@ -231,9 +231,10 @@ public class UserService {
     /**
      * Deletes all users and flushes the repository.
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public void wipeAll() {
         userRepository.deleteAll();
         userRepository.flush();
     }
 }
+

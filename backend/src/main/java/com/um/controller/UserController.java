@@ -5,6 +5,7 @@ import java.security.Principal;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PagedModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
@@ -81,14 +82,15 @@ public class UserController {
     })
     @GetMapping("/users")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN','ROLE_USER')")
-    public Mono<ResponseEntity<Page<UserResponse>>> getAllUsers(
+    public Mono<ResponseEntity<PagedModel<UserResponse>>> getAllUsers(
             @Parameter(description = "Pagination information") 
              Pageable pageable) {
 
         return userService.getAllUsers(pageable)
 							.map(usersPage -> {
 								Page<UserResponse> dtoPage = usersPage.map(UserResponse::fromEntity);
-								return ResponseEntity.ok(dtoPage);
+								PagedModel<UserResponse> pMod = new PagedModel<>(dtoPage);
+								return ResponseEntity.ok(pMod);
 							})
 							.defaultIfEmpty(ResponseEntity.noContent().build());
         
@@ -165,7 +167,8 @@ public class UserController {
         		.flatMap(author -> 
         				userService.updateUser(id, update, author)
                         .map(UserResponse::fromEntity)
-                        .map(ResponseEntity::ok));
+                        .map(ResponseEntity::ok))
+        				.defaultIfEmpty(ResponseEntity.notFound().build());
                         
         		
     }
@@ -183,7 +186,7 @@ public class UserController {
     @DeleteMapping("/users/{id}")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public Mono<ResponseEntity<Void>> disableUser(
-            @Parameter(description = "ID of the user to delete", required = true)
+            @Parameter(description = "ID of the user to disable", required = true)
             @PathVariable Long id) {
 
         return userService.disableUser(id)
@@ -201,7 +204,7 @@ public class UserController {
     })
     @GetMapping("/users/search")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN','ROLE_USER')")
-    public Mono<ResponseEntity<Page<UserResponse>>> searchUsers(
+    public Mono<ResponseEntity<PagedModel<UserResponse>>> searchUsers(
             @Parameter(description = "Username filter", required = false) @RequestParam(required = false) String username,
             @Parameter(description = "Role filter", required = false) @RequestParam(required = false) Role role,
             @Parameter(description = "Pagination information") Pageable pageable) {
@@ -209,8 +212,10 @@ public class UserController {
         return userService.searchUsers(username, role, pageable)
         					.map(usersPage -> {
     							Page<UserResponse> dtoPage = usersPage.map(UserResponse::fromEntity);
-    							return ResponseEntity.ok(dtoPage);
+    							PagedModel<UserResponse> pMod = new PagedModel<>(dtoPage);
+    							return ResponseEntity.ok(pMod);
     						});
 
     }
 }
+

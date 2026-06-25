@@ -2,6 +2,7 @@ package com.um.configuration;
 
 import java.time.Duration;
 
+import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 
 public enum RateLimitingPlan {
@@ -21,8 +22,13 @@ public enum RateLimitingPlan {
 	}
 	
 	public Bucket createBucket() {
-		return Bucket.builder().addLimit(limit->limit.capacity(capacity)
-													.refillIntervally(tokens, Duration.ofMinutes(1))
+		
+		
+		return Bucket.builder().addLimit(limit-> Bandwidth.builder()
+														.capacity(capacity)
+														.refillIntervally(tokens, Duration.ofMinutes(1))
+														.initialTokens(capacity)
 										).build();
 	}
 }
+

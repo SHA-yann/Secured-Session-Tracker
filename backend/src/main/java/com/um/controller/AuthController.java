@@ -1,7 +1,5 @@
 package com.um.controller;
 
-import java.util.Map;
-import org.springframework.http.ResponseCookie;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -13,7 +11,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ServerWebExchange;
 
-import com.um.Exceptions.ResourceNotFoundException;
 import com.um.dto.AuthRequest;
 import com.um.dto.AuthResponse;
 import com.um.service.AuthService;
@@ -113,23 +110,17 @@ public class AuthController {
         @ApiResponse(responseCode = "404", description = "User not found or already logged out")
     })
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                description = "JSON body containing the username key", required = true
-            )
-            @RequestBody Map<String, String> req) {
+    public Mono<ResponseEntity<Void>> logout(
+            @CookieValue(name = "refresh_token", required = false) String refreshToken) {
 
-        String username = req.get("username");
-        boolean success = authService.logout(username);
-
-        if (!success) {
-            throw new ResourceNotFoundException("Session not found");
-        }
-
-        return ResponseEntity.noContent()
-                .header(HttpHeaders.SET_COOKIE,
-                        "refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0")
+        ResponseEntity<Void> responseWithClearedCookie = ResponseEntity.noContent()
+                .header(HttpHeaders.SET_COOKIE, "refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0")
                 .build();
+
+        
+        return authService.logout(refreshToken)
+                .then(Mono.just(responseWithClearedCookie))
+                .defaultIfEmpty(responseWithClearedCookie);
     }
 }
 

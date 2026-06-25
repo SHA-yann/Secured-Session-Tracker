@@ -7,7 +7,6 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.data.domain.Range;
-import org.springframework.data.redis.connection.ReactiveSubscription;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.stereotype.Service;
@@ -47,7 +46,12 @@ public class NotificationService {
 							}
 						})
 						.filter(Objects::nonNull)
-						.doOnNext(bus::tryEmitNext)
+						.doOnNext(event -> {
+						    Sinks.EmitResult result = bus.tryEmitNext(event);
+						    if (result.isFailure()) {
+						        log.warn("Failed to emit presence event to sink bus: {}", result);
+						    }
+						})
 						.subscribe();
 	}
 	
