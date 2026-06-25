@@ -89,7 +89,7 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsSource))
             .csrf(ServerHttpSecurity.CsrfSpec::disable)
             .authorizeExchange(auth -> auth
-                .pathMatchers("/notifications/**","/auth/login","/auth/refresh","/swagger-ui/**","/v3/api-docs/**","/webjars/**","/actuator/prometheus","/actuator/health/**","/actuator/info").permitAll()
+                .pathMatchers("/notifications/**","/auth/**","/swagger-ui/**","/v3/api-docs/**","/webjars/**","/actuator/prometheus","/actuator/health/**","/actuator/info").permitAll()
                 .pathMatchers(HttpMethod.POST, "/users").hasAuthority("ROLE_ADMIN")
                 .pathMatchers(HttpMethod.GET, "/users","/users/**").hasAnyAuthority("ROLE_ADMIN","ROLE_USER")
                 .pathMatchers(HttpMethod.PUT, "/users/**").hasAnyAuthority("ROLE_ADMIN","ROLE_USER")
