@@ -1,8 +1,6 @@
 package com.um.controller;
 
 import java.time.Duration;
-import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -51,25 +49,30 @@ public class NotificationController {
 			                    log.info("presence starting for : {}", username);
 			                    
 			                    Flux<ServerSentEvent<PresenceDTO>> deltas = presence.getStatusDeltas()
-		                                .map(event -> ServerSentEvent.builder(event).event("presence-update").build())
-		                                .share();
+		                                .map(event -> ServerSentEvent.builder(event).event("presence-update")
+		                                		.build());
 			                
 			                    
-			                    Flux<ServerSentEvent<PresenceDTO>> list = presence.getOnlineUsers()
-			                    								.flatMapMany(Flux::fromIterable)
-			                    								.map(u -> {
-			                    									String[] parts = u.split(":");
-		                    										PresenceDTO initialEvent = new PresenceDTO(Long.parseLong(parts[0]),parts[1],"CONNECTED");
-		                    										return ServerSentEvent.builder(initialEvent).event("presence-update").build();
-			                    								});
+			                    Flux<ServerSentEvent<PresenceDTO>> heartbeat = Flux.interval(Duration.ofSeconds(20))
+	                                    .flatMap(i -> {
+		                                	double now = (double)System.currentTimeMillis();
+		                                	String redisValue = user.getId()+":"+user.getUsername();
+	                                    	
+	                                    	return presence.updateUserRedisScore(redisValue, now)
+	                                    					.then(Mono.just(ServerSentEvent.<PresenceDTO>builder().comment("keep-alive").build()));
+		            					});
 			                    
 			                    // ON FORCE LA SÉQUENCE :
 			                    // 1. ADD REDIS -> 2. GET LIST -> 3. MERGE DELTAS
 			                    return presence.addOnlineUser(user.getId(), user.getUsername())
-			                        .thenMany(Flux.concat(list,deltas))
-			                        .mergeWith(Flux.interval(Duration.ofSeconds(15))
-			                                       .map(i -> ServerSentEvent.<PresenceDTO>builder().comment("keep-alive")
-			                                    	.build()))
+			                        .thenMany(Flux.defer(() -> {
+			                        	Flux<ServerSentEvent<PresenceDTO>> list = getOnlineList()
+                								.map(u -> {
+                									return ServerSentEvent.builder(u).event("online-users").build();
+                								});
+			                        	
+			                        	return Flux.concat(list,Flux.merge(deltas,heartbeat));
+			                        }))
 			                        .doFinally(signal -> {
 			                        	presence.scheduleRemoval(user.getId(), user.getUsername());
 			                        	log.info("Session Ended for {}", username);
@@ -85,8 +88,13 @@ public class NotificationController {
 		}
 	
 	@GetMapping("/onlineList")
-	public Mono<List<String>> getOnlineUsers(){
+	public Flux<PresenceDTO> getOnlineList(){
 		
-		return presence.getOnlineUsers();
+		return presence.getOnlineUsers()
+				.map(u -> {
+			       String[] parts = u.split(":");
+			       return new PresenceDTO(Long.parseLong(parts[0]),parts[1],"CONNECTED");
+				});
+				
 	}
 }

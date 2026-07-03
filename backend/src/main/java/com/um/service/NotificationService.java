@@ -1,7 +1,6 @@
 package com.um.service;
 
 import java.time.Duration;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -9,17 +8,21 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.data.domain.Range;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.data.redis.listener.ChannelTopic;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.um.dto.PresenceDTO;
 
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
+import reactor.core.scheduler.Schedulers;
 import reactor.core.Disposable;
 
 @Service
@@ -31,12 +34,16 @@ public class NotificationService {
 	private final ObjectMapper objectMapper;
 	private static final String ONLINE_USERS_KEY = "presence:online-users";
 	private static final String STATUS_CHANNEL ="user-status-changes";
+	private static final String SESSION_COUNT_KEY = "presence:counts";
+	private Disposable redisSubscription;
+	
 	private final Map<Long, Disposable> pendingRemovals = new ConcurrentHashMap<>();
-	private final Sinks.Many<PresenceDTO> bus = Sinks.many().multicast().onBackpressureBuffer();
+	private final Sinks.Many<PresenceDTO> bus = Sinks.many().multicast().onBackpressureBuffer(256, false);
 	
 	@PostConstruct
 	public void init() {
-		this.redisTemplate.listenTo(ChannelTopic.of(STATUS_CHANNEL))
+		this.redisSubscription = this.redisTemplate.listenTo(ChannelTopic.of(STATUS_CHANNEL))
+						.publishOn(Schedulers.boundedElastic())
 						.map(msg -> {
 							try {
 								return objectMapper.readValue(msg.getMessage(), PresenceDTO.class);
@@ -47,13 +54,20 @@ public class NotificationService {
 						})
 						.filter(Objects::nonNull)
 						.doOnNext(event -> {
-						    Sinks.EmitResult result = bus.tryEmitNext(event);
-						    if (result.isFailure()) {
-						        log.warn("Failed to emit presence event to sink bus: {}", result);
-						    }
+							bus.emitNext(event,(signalType, emitResult) -> {
+								if(emitResult == Sinks.EmitResult.FAIL_NON_SERIALIZED)
+									return true;
+								log.warn("Failed to emit presence event to sink bus: {}", emitResult);
+								return false;
+							});
+						})
+						.onErrorResume(e ->{
+							log.error("Redis unavailable! downgrade mode activated");
+							return Mono.empty();
 						})
 						.subscribe();
 	}
+	
 	
 	public Mono<Void> addOnlineUser(Long userId, String username) {
         // CRITIQUE : Si une suppression était prévue, on l'annule de suite
@@ -64,28 +78,45 @@ public class NotificationService {
             // On met quand même à jour le score dans Redis pour le heartbeat
         }
 
-        String idStr = String.valueOf(userId);
-        double now = System.currentTimeMillis();
-        PresenceDTO event = new PresenceDTO(userId, username,"CONNECTED");
+        String redisValue = userId + ":" + username;
+        String userKey = String.valueOf(userId);
         
-        try {
-        	String jsonPayload = objectMapper.writeValueAsString(event);
-	        return redisTemplate.opsForZSet().add(ONLINE_USERS_KEY, idStr+":"+username, now)
-	                .then(redisTemplate.convertAndSend(STATUS_CHANNEL, jsonPayload))
-	                .then();
-        }catch(Exception e) {
-        	return Mono.error(e);
-        }
+        
+        return redisTemplate.opsForHash().increment(SESSION_COUNT_KEY, userKey, 1L)
+        		.flatMap(currentCount -> {
+        			double now = (double)System.currentTimeMillis();
+        			
+        			return redisTemplate.opsForZSet().add(ONLINE_USERS_KEY, redisValue, now)
+        	                .then(Mono.defer(() -> {
+        	                	if(currentCount == 1) {
+        	                		log.info("{} session for {}",currentCount,username);
+        	                		return publishStatus(userId, username, "CONNECTED");
+        	                	}
+        	                	log.info("{} sessions for {}",currentCount,username);
+        	                	return Mono.empty();
+        	                }));
+        		})
+        		.onErrorResume(e ->{
+					log.error("Redis unavailable! downgrade mode activated");
+					return Mono.empty();
+				})
+        	    .then();
+
     }
 
     public void scheduleRemoval(Long userId, String username) {
         log.info("Session will be terminated (in 15s)");
         
+        Disposable previous = pendingRemovals.get(userId);
+        if (previous != null && !previous.isDisposed()) {
+            previous.dispose();
+        }
+        
         // On crée une tâche différée
         Disposable removalTask = Mono.delay(Duration.ofSeconds(15))
 						            .flatMap(d -> {
+						            	
 						                pendingRemovals.remove(userId);
-						                log.info("Session ended for {}", username);
 						                return removeOnlineUser(userId, username);
 						            })
 						            .subscribe();
@@ -94,33 +125,108 @@ public class NotificationService {
     }
 
     public Mono<Void> removeOnlineUser(Long userId, String username) {
-        String idStr = String.valueOf(userId);
-        PresenceDTO event = new PresenceDTO(userId, username,"DISCONNECTED");
-        
-        try {
-        	String jsonPayload = objectMapper.writeValueAsString(event);
-	        return redisTemplate.opsForZSet().remove(ONLINE_USERS_KEY, idStr+":"+username)
-	                .then(redisTemplate.convertAndSend(STATUS_CHANNEL, jsonPayload))
-	                .then();
-        }catch(Exception e) {
-        	return Mono.error(e);
-        }
+    	String redisValue = userId + ":" + username;
+    	String userKey = String.valueOf(userId);
+    	
+	        return redisTemplate.opsForHash().increment(SESSION_COUNT_KEY, userKey, -1L)
+	        		//.log("DEBUG_REMOV")
+	        		.flatMap(currentCount ->{
+	        			if(currentCount <= 0) {
+	        				log.info("No active session remaining for {}", username);
+	        				return redisTemplate.opsForHash().remove(SESSION_COUNT_KEY, userKey)
+				        		.then(redisTemplate.opsForZSet().remove(ONLINE_USERS_KEY, redisValue))
+				                .then(publishStatus(userId, username,"DISCONNECTED"));
+	        			}
+	        			log.info("{} terminated a session but still gets {} active(s)",username,currentCount);
+	        			return Mono.empty();
+	        		})
+	        		.onErrorResume(e ->{
+						log.error("Redis unavailable! degrade mode activated");
+						return Mono.empty();
+					})
+	        		.then();
+	        	
     }
-	
-	public Mono<Long> purgeExpiredUsers(){
+    
+    public Mono<Void> instantRemove(Long userId, String username){
+    	String redisValue = userId + ":" + username;
+    	String userKey = String.valueOf(userId);
+    	return redisTemplate.opsForHash().remove(SESSION_COUNT_KEY, userKey)
+				.then(redisTemplate.opsForZSet().remove(ONLINE_USERS_KEY, redisValue))
+		        .then(publishStatus(userId, username,"DISCONNECTED"))
+		        .onErrorResume(e ->{
+					log.error("Redis unavailable! downgrade mode activated");
+					return Mono.empty();
+				});
+    }
+    
+	private Mono<Void> publishStatus(Long userId, String username, String status){
+		PresenceDTO event = new PresenceDTO(userId, username,status);
+		String jsonPayload;
+		try {
+			jsonPayload = objectMapper.writeValueAsString(event);
+		} catch (JsonProcessingException e) {
+			return Mono.error(e);
+		}
+		return redisTemplate.convertAndSend(STATUS_CHANNEL, jsonPayload)
+							.then();
 		
-		double threshold = System.currentTimeMillis() - (30 * 1000);
-		return redisTemplate.opsForZSet().removeRangeByScore(ONLINE_USERS_KEY, Range.closed(0.0,threshold));
+	}
+    
+    @Scheduled(fixedRate = 15000)
+	public void autoPurge(){
+		
+		double threshold = (double) System.currentTimeMillis() - (60 * 1000);
+		
+		 redisTemplate.opsForZSet()
+				.rangeByScore(ONLINE_USERS_KEY, Range.of(Range.Bound.inclusive(0.0), Range.Bound.inclusive(threshold))
+				)
+				.flatMap(expired -> {
+					String[] parts = expired.split(":");
+					Long id = Long.parseLong(parts[0]) ;
+			    	String name = parts[1];
+					log.info("No active session remaining for {}", name);
+					return instantRemove(id,name);
+				})
+				.subscribeOn(Schedulers.boundedElastic())
+				.onErrorResume(e ->{
+					log.error("Redis unavailable! downgrade mode activated");
+					return Mono.empty();
+				})
+				.subscribe();
 	}
 	
-	public Mono<List<String>> getOnlineUsers() {
+	public Flux<String> getOnlineUsers() {
 		
-		return purgeExpiredUsers().then(redisTemplate.opsForZSet()
-							.range(ONLINE_USERS_KEY,Range.unbounded()).collectList());
+		return redisTemplate.opsForZSet()
+							.range(ONLINE_USERS_KEY,Range.unbounded())
+							.onErrorResume(e ->{
+								log.error("Redis unavailable! downgrade mode activated");
+								return Mono.empty();
+							});
 	}
+	
+	public Mono<Boolean> updateUserRedisScore(String member, double score){
+		
+		return redisTemplate.opsForZSet().add(ONLINE_USERS_KEY, member, score)
+							.onErrorResume(e ->{
+								log.error("Redis unavailable! downgrade mode activated");
+								return Mono.empty();
+							});
+	}
+	
 	
 	public Flux<PresenceDTO> getStatusDeltas(){
 		
 		return bus.asFlux();
+	}
+	
+	@PreDestroy
+	public void destroy() {
+		if(this.redisSubscription != null && !this.redisSubscription.isDisposed())
+			this.redisSubscription.dispose();
+		
+		pendingRemovals.values().forEach((Disposable::dispose));
+		pendingRemovals.clear();
 	}
 }
