@@ -6,6 +6,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.ReactiveAuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +19,7 @@ import com.um.configuration.CookieProvider;
 import com.um.configuration.JwtProvider;
 import com.um.dto.AuthRequest;
 import com.um.model.RefreshToken;
+import com.um.repository.RefreshTokenRepository;
 import com.um.repository.UserRepository;
 
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +39,8 @@ public class AuthService {
     private final MyUserDetailsService myUserDetailsService;
     private final JwtProvider jwtProvider;
     private final RefreshTokenService refreshTokenService;
+    private final NotificationService notificationService;
+    private final RefreshTokenRepository refreshTokenRepository;
     
     @Value("${security.cookie.domain}")
     private String cookieDomain;
@@ -47,12 +53,15 @@ public class AuthService {
     public AuthService(ReactiveAuthenticationManager authenticationManager,UserRepository userRepo,
                        JwtProvider jwtProvider,
                        MyUserDetailsService myUserDetailsService,
-                       RefreshTokenService refreshTokenService) {
+                       RefreshTokenService refreshTokenService,
+                       NotificationService notificationService, RefreshTokenRepository refreshTokenRepository) {
         this.authenticationManager = authenticationManager;
         this.userRepo = userRepo;
         this.jwtProvider = jwtProvider;
         this.myUserDetailsService = myUserDetailsService;
         this.refreshTokenService = refreshTokenService;
+        this.notificationService = notificationService;
+		this.refreshTokenRepository = refreshTokenRepository;
     }
     
     
@@ -60,25 +69,26 @@ public class AuthService {
     public Mono<AuthResult> login(AuthRequest request) {
     	
     	return authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()))
-    								.flatMap(auth ->{
-    									UserDetails userDetails = (UserDetails) auth.getPrincipal();
-    									String token = jwtProvider.generateToken(userDetails);
-    									return Mono.fromCallable(() -> 
-    											userRepo.findByUsername(auth.getName()))
-       											.subscribeOn(Schedulers.boundedElastic())
-    											.flatMap(oP -> Mono.justOrEmpty(oP))
-    											//.log("DEBUG_LOGIN")
-    											.flatMap( user -> {
-    												return Mono.fromCallable(() -> refreshTokenService.issue(user))
-    														.subscribeOn(Schedulers.boundedElastic())
-    														.map( rt -> {
-			    												int maxAge = (int) (rt.getExpiresAt().getEpochSecond() - Instant.now().getEpochSecond());
-			    												ResponseCookie refreshCookie = CookieProvider.createCookie(REFRESH_COOKIE, rt.getToken(), cookieDomain, cookieSecure, maxAge);
-			    										        return new AuthResult(token, refreshCookie);
-    														});
-    											});
-    											
-    								});
+					//.log("DEBUG_LOGIN")
+					.flatMap(auth ->{
+					UserDetails userDetails = (UserDetails) auth.getPrincipal();
+					String token = jwtProvider.generateToken(userDetails);
+					return Mono.fromCallable(() -> 
+							userRepo.findByUsername(auth.getName()))
+							.subscribeOn(Schedulers.boundedElastic())
+							.flatMap(oP -> Mono.justOrEmpty(oP))
+							
+							.flatMap( user -> {
+								return Mono.fromCallable(() -> refreshTokenService.issue(user))
+										.subscribeOn(Schedulers.boundedElastic())
+										.map( rt -> {
+											int maxAge = (int) (rt.getExpiresAt().getEpochSecond() - Instant.now().getEpochSecond());
+											ResponseCookie refreshCookie = CookieProvider.createCookie(REFRESH_COOKIE, rt.getRtToken(), cookieDomain, maxAge);
+									        return new AuthResult(token, refreshCookie);
+										});
+							});
+								
+					});
     	
     }
 
@@ -104,7 +114,7 @@ public class AuthService {
         					  .map(uD -> {
         						String newAccess = jwtProvider.generateToken(uD);
 		        			    int maxAge = (int) (nextRt.getExpiresAt().getEpochSecond() - Instant.now().getEpochSecond());
-						        ResponseCookie newRefreshCookie = CookieProvider.createCookie(REFRESH_COOKIE, nextRt.getToken(), cookieDomain, cookieSecure, maxAge);
+						        ResponseCookie newRefreshCookie = CookieProvider.createCookie(REFRESH_COOKIE, nextRt.getRtToken(), cookieDomain, maxAge);
 						        return new AuthResult(newAccess, newRefreshCookie);
         					  	});
         		  });
@@ -112,26 +122,46 @@ public class AuthService {
     }
 
     
-    @Transactional
     public Mono<Void> logout(String refreshToken) {
         if (refreshToken == null || refreshToken.isBlank()) {
-            log.debug("Logout ignoré : refresh token vide ou nul.");
+            log.info("Logout ignored : refresh token invalid or nul.");
             return Mono.empty();
         }
 
-        return Mono.fromCallable(() -> refreshTokenService.verify(refreshToken))
-                .subscribeOn(Schedulers.boundedElastic())
-                .flatMap(currentRt -> 
-                    Mono.fromRunnable(() -> refreshTokenService.revokeUserTokens(currentRt.getUser().getId()))
-                        .subscribeOn(Schedulers.boundedElastic())
-                )
-                .doOnSuccess(v -> log.info("Déconnexion réussie et tokens révoqués en base."))
-                .onErrorResume(e -> {
-                    log.warn("Tentative de déconnexion avec un token invalide, expiré ou déjà révoqué : {}", e.getMessage());
-                    return Mono.empty(); 
-                })
-                .then(); 
+        return ReactiveSecurityContextHolder.getContext()
+        		.log("DEBUG_LOGOUT")
+        		.map(SecurityContext::getAuthentication)
+        		.map(Authentication::getName)
+        		.flatMap(currentUsername -> {
+        			
+        			return Mono.fromCallable(() -> {
+        			
+        				RefreshToken currentRt = refreshTokenService.verify(refreshToken);
+        				String tokenOwner = currentRt.getUser().getUsername();    			        	
+    			        	
+			        	if(!tokenOwner.equals(currentUsername)) {
+			        		log.info("Security Alert: User {} tried to logout using {}'s refresh token",currentUsername,tokenOwner);
+			        		throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Token mismatch");
+			        	}
+    			        
+			        	currentRt.setRevoked(true);
+			        	refreshTokenRepository.save(currentRt);
+						log.info("refresh token revoked for {}",tokenOwner);
+						
+						return currentRt.getUser();
+        			})
+					.subscribeOn(Schedulers.boundedElastic())
+					.flatMap(user -> {
+						return notificationService.removeOnlineUser(user.getId(), user.getUsername())
+							   .doOnSuccess(v -> log.info("logout succesfull for {}",user.getUsername()));
+					});
+        		})
+		        .onErrorResume(e -> {
+		            log.warn("An error occured : {}", e.getMessage());
+		            return Mono.empty();
+		        })
+		        .then();
+         
     }
 }
-
 

@@ -1,5 +1,7 @@
 package com.um.configuration;
 
+import java.time.Duration;
+
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
 
@@ -21,11 +23,11 @@ public class CookieProvider {
      * @param maxAge maximum age in seconds
      * @return configured HttpServlet Cookie
      */
-    public static ResponseCookie createCookie(String name, String value, String domain, boolean secure, int maxAge) {
+    public static ResponseCookie createCookie(String name, String value, String domain, int maxAge) {
         
         return ResponseCookie.from(name,value)
         					.httpOnly(true)
-        					.secure(secure)
+        					.secure(true)
         					.path("/")
         					.maxAge(maxAge)
         					.domain(domain)
@@ -33,13 +35,13 @@ public class CookieProvider {
         					.build();
     }
 
-    public static ResponseCookie clearCookie(String name, String domain, boolean secure) {
+    public static ResponseCookie clearCookie(String name ) {
     	return ResponseCookie.from(name,"")
 				.httpOnly(true)
-				.secure(secure)
+				.secure(false)
+				.sameSite("Strict")
 				.path("/")
-				.maxAge(0)
-				.domain(domain)
+				.maxAge(Duration.ZERO)
 				.build();
     }
 }

@@ -30,6 +30,7 @@ import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 import org.springframework.web.server.WebFilter;
 
 import com.um.service.MyUserDetailsService;
+import com.um.service.RateLimitingService;
 
 /**
  * Configures Spring Security for the application.
@@ -40,8 +41,9 @@ import com.um.service.MyUserDetailsService;
 @EnableReactiveMethodSecurity
 public class SecurityConfig {
 
-    private final JwtAuthFilter jwtAuthFilter;
-    private final RateLimitingFilter rateLimitingFilter;
+    private final RateLimitingService rateLimitingService;
+    private final JwtProvider jwtProvider;
+	private final MyUserDetailsService userDetailsService;
 
     /**
      * Creates a new {@code SecurityConfig}.
@@ -49,10 +51,11 @@ public class SecurityConfig {
      * @param jwtAuthFilter the JWT authentication filter
      * @param userDetailsService the user details service (injected for future use)
      */
-    public SecurityConfig(@Lazy JwtAuthFilter jwtAuthFilter,
-    							RateLimitingFilter rateLimitingFilter, @Lazy MyUserDetailsService userDetailsService) {
-        this.jwtAuthFilter = jwtAuthFilter;
-        this.rateLimitingFilter = rateLimitingFilter;
+    public SecurityConfig( RateLimitingService rateLimitingService,
+    						@Lazy MyUserDetailsService userDetailsService, JwtProvider jwtProvider) {
+        this.rateLimitingService = rateLimitingService;
+		this.jwtProvider = jwtProvider;
+		this.userDetailsService = userDetailsService;
     }
 
     /**
@@ -85,6 +88,10 @@ public class SecurityConfig {
      */
     @Bean
      SecurityWebFilterChain securityFilterChain(ServerHttpSecurity http,CorsConfigurationSource corsSource) {
+    	
+    	JwtAuthFilter jwtAuthFilter = new JwtAuthFilter(jwtProvider,userDetailsService);
+    	RateLimitingFilter rateLimitingFilter = new RateLimitingFilter(rateLimitingService);
+    	
         http
             .cors(cors -> cors.configurationSource(corsSource))
             .csrf(ServerHttpSecurity.CsrfSpec::disable)
@@ -133,10 +140,10 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:4200"));
+        configuration.setAllowedOrigins(List.of("*"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE","OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization","Content-Type","Accept"));
-        configuration.setAllowCredentials(true);
+        configuration.setAllowCredentials(false);
         configuration.setExposedHeaders(List.of("Set-Cookie"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

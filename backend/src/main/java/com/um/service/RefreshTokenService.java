@@ -6,6 +6,7 @@ import java.time.temporal.ChronoUnit;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +16,7 @@ import com.um.model.RefreshToken;
 import com.um.model.User;
 import com.um.repository.RefreshTokenRepository;
 
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -23,6 +25,7 @@ import reactor.core.scheduler.Schedulers;
  * Service managing the lifecycle of refresh tokens.
  * Handles issuing, verifying, rotating, and revoking tokens.
  */
+@Slf4j
 @Service
 public class RefreshTokenService {
 
@@ -69,8 +72,8 @@ public class RefreshTokenService {
      * @throws IllegalStateException if the token is expired or revoked
      */
     @Transactional(readOnly = true)
-    public RefreshToken verify(String token) {
-        RefreshToken rt = refreshTokenRepository.findByToken(token)
+    public RefreshToken verify(String rtToken) {
+        RefreshToken rt = refreshTokenRepository.findByRtToken(rtToken)
                 .orElseThrow(() -> new ResourceNotFoundException("Refresh token not found"));
 
         if (rt.isRevoked() || Instant.now().isAfter(rt.getExpiresAt())) {
@@ -98,26 +101,55 @@ public class RefreshTokenService {
      * @param userId ID of the user whose tokens should be revoked
      */
     @Transactional
-    public Mono<Void> revokeUserTokens(long userId) {
+    public Mono<Void> revokeAllUserTokens(long userId) {
     	
         return Mono.fromCallable(() -> refreshTokenRepository.findByUserId(userId))
         			.subscribeOn(Schedulers.boundedElastic())
 	                .flatMap(tokens -> {
 	                	if(tokens.isEmpty())
 	                		return Mono.empty();
+	                	
 	                	tokens.forEach(rt -> rt.setRevoked(true));
 	                	return Mono.fromCallable(() -> refreshTokenRepository.saveAll(tokens))
 	                				.subscribeOn(Schedulers.boundedElastic())
+	                				.log("DEBUG_REVOK")
 	                				.flatMapMany(Flux::fromIterable)
 	                				.flatMap(rt ->{
-					                	long ttl = jwtProvider.extractExpiration(rt.getToken()).getTime() - System.currentTimeMillis();
+					                	long ttl = jwtProvider.extractExpiration(rt.getRtToken()).getTime() - System.currentTimeMillis();
 					                    if(ttl >0)
-					                    	return rsrt.opsForValue().set("Blacklist:"+rt.getToken(),"true",Duration.ofMillis(ttl));
+					                    	return rsrt.opsForValue().set("Blacklist:"+rt.getRtToken(),"true",Duration.ofMillis(ttl))
+					                    			.onErrorResume(e ->{
+					        							log.error("Redis unavailable! downgrade mode activated");
+					        							return Mono.empty();
+					        						});
 					                    
 					                    return Mono.empty();
 	                				})
 	                				.then();
 	                });
         			
+    }
+    
+    @Transactional
+    public Mono<Void> revokeUserToken(RefreshToken rt){
+    	return Mono.fromCallable(() -> {
+			rt.setRevoked(true);
+			log.info("refresh token revoked");
+			return refreshTokenRepository.save(rt);
+		})
+		.subscribeOn(Schedulers.boundedElastic())
+		.then();
+    }
+    
+    @Scheduled(cron="0 0 0 * * *")
+    @Transactional
+    public void autoClearTokens() {
+    	log.info("Useless refrestokens clean up started...");
+    	Mono.fromCallable(() -> refreshTokenRepository.deleteUselessTokens(Instant.now()))
+    		.subscribeOn(Schedulers.boundedElastic())
+    		.subscribe(
+    			deletedCount -> log.info("Cleanup ended : {} tokens cleared from database", deletedCount),
+    			error -> log.error("An error occured during the process", error)
+    		);
     }
 }

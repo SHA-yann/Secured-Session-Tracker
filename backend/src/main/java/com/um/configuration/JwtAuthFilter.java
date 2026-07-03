@@ -3,7 +3,6 @@ package com.um.configuration;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
-import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
@@ -19,7 +18,6 @@ import org.springframework.http.HttpHeaders;
  * extracts the JWT token from the Authorization header,
  * validates it, and sets the security context accordingly.
  */
-@Component
 @Slf4j
 public class JwtAuthFilter implements WebFilter {
 
@@ -72,21 +70,22 @@ public class JwtAuthFilter implements WebFilter {
         
 		return jwtProvider.isBlacklisted(token)
 				.flatMap(blocked -> {
-					if(!blocked)
-			        	return userDetailsService.findByUsername(username)
-							.flatMap(userDetails ->{
-								if(jwtProvider.validToken(token, userDetails)){
-			
-					                UsernamePasswordAuthenticationToken authenticationToken =
-					                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-					                
-					                return chain.filter(exchange).contextWrite(ReactiveSecurityContextHolder.withAuthentication(authenticationToken));
-								}
-								
-								return chain.filter(exchange);
-							})
-							.switchIfEmpty(Mono.defer(()->chain.filter(exchange)));
-					return chain.filter(exchange);
+					if(blocked)
+						return chain.filter(exchange);
+					
+		        	return userDetailsService.findByUsername(username)
+						.flatMap(userDetails ->{
+							if(jwtProvider.validToken(token, userDetails)){
+		
+				                UsernamePasswordAuthenticationToken authenticationToken =
+				                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+				                
+				                return chain.filter(exchange).contextWrite(ReactiveSecurityContextHolder.withAuthentication(authenticationToken));
+							}
+							
+							return chain.filter(exchange);
+						})
+						.switchIfEmpty(Mono.defer(()->chain.filter(exchange)));
 				});
 	}
 }

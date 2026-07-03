@@ -32,6 +32,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
+    private final NotificationService notificationService;
 
     /**
      * Constructs a UserService with required dependencies.
@@ -40,10 +41,12 @@ public class UserService {
      * @param passwordEncoder encoder for hashing user passwords
      */
     public UserService(UserRepository userRepository,@Lazy PasswordEncoder passwordEncoder, 
-    					RefreshTokenService refreshTokenService) {
+    					RefreshTokenService refreshTokenService,
+    					NotificationService notificationService) {
         this.userRepository = userRepository;
 		this.passwordEncoder = passwordEncoder;
 		this.refreshTokenService = refreshTokenService;
+		this.notificationService = notificationService;
     }
 
     /**
@@ -188,15 +191,15 @@ public class UserService {
     public Mono<Void> disableUser(Long id) {
         
         return Mono.fromCallable(() -> {
-					return userRepository.findById(id)
-					.orElseThrow(() -> new UserNotFoundException("User with id " + id + " not found"));
+						return userRepository.findById(id).get();
 					}).subscribeOn(Schedulers.boundedElastic())
 					.flatMap(u -> {
+						
 						u.setStatus(Status.INACTIVE);
-						refreshTokenService.revokeUserTokens(u.getId());
+						refreshTokenService.revokeAllUserTokens(id)
+						.then(notificationService.instantRemove(id, u.getUsername()));
 						return Mono.fromCallable(() -> {									
-									userRepository.save(u);
-									return u;
+										return userRepository.save(u);
 									})
 									.subscribeOn(Schedulers.boundedElastic());
 				    }).then();
