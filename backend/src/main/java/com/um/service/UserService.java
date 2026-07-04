@@ -145,7 +145,7 @@ public class UserService {
      * @throws UserNotFoundException if user not found
      */
     @Transactional
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or #username==principal.username")
     public Mono<User> updateUser(Long id, UpdateRequest update, String author) {
         
     	return ReactiveSecurityContextHolder.getContext()

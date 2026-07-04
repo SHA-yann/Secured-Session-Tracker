@@ -2,6 +2,8 @@ package com.um.configuration;
 
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
@@ -31,6 +33,8 @@ import org.springframework.web.server.WebFilter;
 
 import com.um.service.MyUserDetailsService;
 import com.um.service.RateLimitingService;
+
+import reactor.core.publisher.Mono;
 
 /**
  * Configures Spring Security for the application.
@@ -106,7 +110,9 @@ public class SecurityConfig {
             .exceptionHandling(exceptionHandling -> exceptionHandling
             		.authenticationEntryPoint((exchange, e) ->{
             			exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-            			exchange.getResponse().getHeaders().remove(HttpHeaders.WWW_AUTHENTICATE);
+            			if(!exchange.getResponse().isCommitted()) { // Vérifie si la réponse n'a pas encore été engagée, sinon, erreur non blocante
+            				exchange.getResponse().getHeaders().remove(HttpHeaders.WWW_AUTHENTICATE);// Supprime l'en-tête WWW-Authenticate pour éviter les prompts de navigateur
+            			}
             			return exchange.getResponse().setComplete();
             		})
             )
@@ -121,11 +127,27 @@ public class SecurityConfig {
     @Order(Ordered.HIGHEST_PRECEDENCE)
     WebFilter logFilter() {
     	return (exchange, chain) ->{
-    		System.out.println(">>>Requete entrante:"+exchange.getRequest().getPath());
-    		System.out.println("Headers:"+exchange.getRequest().getHeaders());
-    		return chain.filter(exchange);
+    		
+    		return chain.filter(exchange)
+    				.doFirst(() -> {
+    					System.out.println(">>>Requete entrante:"+exchange.getRequest().getPath());
+    					System.out.println("Headers:"+exchange.getRequest().getHeaders());
+    				});
+    		
     	};
     }
+    
+    /* @Bean
+    @Order(Ordered.HIGHEST_PRECEDENCE) // forcer l'écriture d'un Log de niveau ERROR avec la stack trace complète en déclarant un WebFilter de diagnostic dédié, placé tout au début de ta chaîne
+    WebFilter debugStackTraceFilter() {
+        Logger log = LoggerFactory.getLogger("DEBUG_STACK_TRACE");
+        return (exchange, chain) -> chain.filter(exchange)
+                .onErrorResume(ex -> {
+                    // Force l'impression de la stack trace complète dans la console de l'IDE
+                    log.error("=== CRASH CAPTURÉ AU SOMMET DU PIPELINE WEBFLUX ===", ex);
+                    return Mono.error(ex); // Relance l'erreur pour ne pas casser le flux nominal
+                });
+    } */
 
     /**
      * Configures Cross-Origin Resource Sharing (CORS) to allow frontend applications.
@@ -140,10 +162,10 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("*"));
+        configuration.setAllowedOrigins(List.of("http://localhost:4200"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE","OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization","Content-Type","Accept"));
-        configuration.setAllowCredentials(false);
+        configuration.setAllowCredentials(true);
         configuration.setExposedHeaders(List.of("Set-Cookie"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

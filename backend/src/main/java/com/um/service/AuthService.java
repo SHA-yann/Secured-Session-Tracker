@@ -4,6 +4,7 @@ import java.time.Instant;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.ReactiveAuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -77,14 +78,14 @@ public class AuthService {
 							userRepo.findByUsername(auth.getName()))
 							.subscribeOn(Schedulers.boundedElastic())
 							.flatMap(oP -> Mono.justOrEmpty(oP))
-							
 							.flatMap( user -> {
 								return Mono.fromCallable(() -> refreshTokenService.issue(user))
 										.subscribeOn(Schedulers.boundedElastic())
 										.map( rt -> {
 											int maxAge = (int) (rt.getExpiresAt().getEpochSecond() - Instant.now().getEpochSecond());
 											ResponseCookie refreshCookie = CookieProvider.createCookie(REFRESH_COOKIE, rt.getRtToken(), cookieDomain, maxAge);
-									        return new AuthResult(token, refreshCookie);
+									        log.info("Access token created");
+											return new AuthResult(token, refreshCookie);
 										});
 							});
 								
@@ -115,13 +116,14 @@ public class AuthService {
         						String newAccess = jwtProvider.generateToken(uD);
 		        			    int maxAge = (int) (nextRt.getExpiresAt().getEpochSecond() - Instant.now().getEpochSecond());
 						        ResponseCookie newRefreshCookie = CookieProvider.createCookie(REFRESH_COOKIE, nextRt.getRtToken(), cookieDomain, maxAge);
+						        log.info("Access token refreshed");
 						        return new AuthResult(newAccess, newRefreshCookie);
         					  	});
         		  });
         	
     }
 
-    
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN','ROLE_USER')")
     public Mono<Void> logout(String refreshToken) {
         if (refreshToken == null || refreshToken.isBlank()) {
             log.info("Logout ignored : refresh token invalid or nul.");
@@ -129,7 +131,7 @@ public class AuthService {
         }
 
         return ReactiveSecurityContextHolder.getContext()
-        		.log("DEBUG_LOGOUT")
+        		//.log("DEBUG_LOGOUT")
         		.map(SecurityContext::getAuthentication)
         		.map(Authentication::getName)
         		.flatMap(currentUsername -> {

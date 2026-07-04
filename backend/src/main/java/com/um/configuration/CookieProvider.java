@@ -31,7 +31,7 @@ public class CookieProvider {
         					.path("/")
         					.maxAge(maxAge)
         					.domain(domain)
-        					.sameSite("Lax")
+        					.sameSite("Strict")
         					.build();
     }
 

@@ -1,6 +1,5 @@
 package com.um.controller;
 
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -11,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ServerWebExchange;
 
+import com.um.configuration.CookieProvider;
 import com.um.dto.AuthRequest;
 import com.um.dto.AuthResponse;
 import com.um.service.AuthService;
@@ -89,14 +89,14 @@ public class AuthController {
             ServerWebExchange exchange) {
 
     	if (refreshToken == null || refreshToken.isEmpty()) {
-    		log.warn("No refresh cooki found!");
+    		log.warn("No refresh cookie found!");
     		return Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
     	}
     	
         return authService.refresh(refreshToken)
 						  .map(res -> {exchange.getResponse().addCookie(res.cookie());
 							return ResponseEntity.ok(new AuthResponse(res.token()));
-							});
+						   });
         		
     }
 
@@ -111,16 +111,15 @@ public class AuthController {
     })
     @PostMapping("/logout")
     public Mono<ResponseEntity<Void>> logout(
-            @CookieValue(name = "refresh_token", required = false) String refreshToken) {
+            @CookieValue(name = "refresh_token", required = false) String refreshToken, ServerWebExchange exchange) {
 
-        ResponseEntity<Void> responseWithClearedCookie = ResponseEntity.noContent()
-                .header(HttpHeaders.SET_COOKIE, "refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0")
-                .build();
-
-        
-        return authService.logout(refreshToken)
-                .then(Mono.just(responseWithClearedCookie))
-                .defaultIfEmpty(responseWithClearedCookie);
+               exchange.getResponse().beforeCommit(() -> Mono.fromRunnable(() ->
+	            	   exchange.getResponse().addCookie(CookieProvider.clearCookie("refresh_token"))
+	               ));
+	          
+               return authService.logout(refreshToken)
+            		   .then(Mono.just(ResponseEntity.noContent().build()));
+               
     }
 }
 
