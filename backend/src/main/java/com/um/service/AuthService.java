@@ -124,7 +124,7 @@ public class AuthService {
     }
 
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN','ROLE_USER')")
-    public Mono<Void> logout(String refreshToken) {
+    public Mono<Void> logout(String refreshToken, String sseSessionId) {
         if (refreshToken == null || refreshToken.isBlank()) {
             log.info("Logout ignored : refresh token invalid or nul.");
             return Mono.empty();
@@ -154,7 +154,7 @@ public class AuthService {
         			})
 					.subscribeOn(Schedulers.boundedElastic())
 					.flatMap(user -> {
-						return notificationService.removeOnlineUser(user.getId(), user.getUsername())
+						return notificationService.removeOnlineUser(user.getId(), user.getUsername(), sseSessionId)
 							   .doOnSuccess(v -> log.info("logout succesfull for {}",user.getUsername()));
 					});
         		})

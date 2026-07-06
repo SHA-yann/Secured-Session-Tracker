@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ServerWebExchange;
 
@@ -111,13 +112,15 @@ public class AuthController {
     })
     @PostMapping("/logout")
     public Mono<ResponseEntity<Void>> logout(
-            @CookieValue(name = "refresh_token", required = false) String refreshToken, ServerWebExchange exchange) {
+            @CookieValue(name = "refresh_token", required = false) String refreshToken,
+            @RequestParam("id") String sseSessionId ,
+            ServerWebExchange exchange) {
 
                exchange.getResponse().beforeCommit(() -> Mono.fromRunnable(() ->
 	            	   exchange.getResponse().addCookie(CookieProvider.clearCookie("refresh_token"))
 	               ));
 	          
-               return authService.logout(refreshToken)
+               return authService.logout(refreshToken,sseSessionId)
             		   .then(Mono.just(ResponseEntity.noContent().build()));
                
     }
