@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { StatusEnum, UsersApiService } from '../../core/api-client';
 import { AuthService } from '../../core/secure/authService';
-import { NotificationService } from '../../shared/services/notification-service';
+import { NotificationService } from '../../core/services/notification-service';
 
 @Component({
   selector: 'app-user-stats',

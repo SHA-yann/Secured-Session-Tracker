@@ -1,5 +1,5 @@
 import { HttpErrorResponse, HttpInterceptorFn } from "@angular/common/http";
-import { NotificationService } from "../../shared/services/notification-service";
+import { NotificationService } from "../services/notification-service";
 import { catchError, throwError } from "rxjs";
 import { inject } from "@angular/core";
 

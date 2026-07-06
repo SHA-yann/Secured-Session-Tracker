@@ -4,7 +4,7 @@ import { AuthenticationApiService } from "../api-client";
 import { Router } from "@angular/router";
 import { inject } from "@angular/core";
 import { AuthResponse } from "../api-client/model/authResponse";
-import { NotificationService } from "../../shared/services/notification-service";
+import { NotificationService } from "../services/notification-service";
 import { AuthService } from "./authService";
 
 let isRefreshing=false;

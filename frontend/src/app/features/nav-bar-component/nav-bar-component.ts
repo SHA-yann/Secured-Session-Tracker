@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/secure/authService';
-import { PresenceStore } from '../../shared/services/presenceStore';
+import { PresenceStore } from '../../core/services/presenceStore';
 import { UserAvatarComponent } from '../user-avatar-component/user-avatar-component';
 
 @Component({

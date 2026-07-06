@@ -3,6 +3,10 @@ import { jwtDecode } from 'jwt-decode';
 import { AuthenticationApiService } from "../api-client/api/api";
 import { AuthRequest } from "../api-client";
 import { BehaviorSubject, tap } from "rxjs";
+import { PresenceStore } from "../services/presenceStore";
+import { Router } from "@angular/router";
+import { HttpClient } from "@angular/common/http";
+import { env } from "../../../env";
 
 export interface TokenPayload {
     sub: string; // username
@@ -17,9 +21,11 @@ export interface TokenPayload {
 })
 export class AuthService{
 
-    private userSubject = new BehaviorSubject<any|null>(null);
-    private readonly authApi = inject(AuthenticationApiService);   
+    private readonly authApi = inject(AuthenticationApiService);
+    private readonly http = inject(HttpClient);
     private readonly _token = signal<string | null>(localStorage.getItem('jwt_token'));
+    private readonly presence = inject(PresenceStore);
+    private readonly router = inject(Router);
     
     readonly userPayload = computed<TokenPayload | null>(() => {
         const token = this._token();
@@ -36,7 +42,6 @@ export class AuthService{
     });
 
     readonly username = computed(() => this.userPayload()?.sub ?? null);
-    readonly user$ = this.userSubject.asObservable();
     readonly userId = computed(() => this.userPayload()?.ID ?? null);
     readonly isAdmin = computed(() => this.userPayload()?.Role.includes('ROLE_ADMIN') || false);
     
@@ -59,7 +64,24 @@ export class AuthService{
     }
 
     logout(): void{
-        localStorage.removeItem('jwt_token');
-        this._token.set(null);
+
+        this.presence.disconnect();
+        this.http.post<void>(`${env.backUrl}/auth/logout?id=${this.presence.connectionId}`,{})
+            .subscribe({
+                next:(response) => {
+                    console.log('Backend logout successful :'+`${response}`);
+                    localStorage.removeItem('jwt_token');
+                    this._token.set(null);
+                    this.router.navigate(['/login']);
+                    console.log('logout finalized');
+                },
+                error: (err) =>{
+                    console.log('Backend returned an error ',err);
+                    localStorage.removeItem('jwt_token');
+                    this._token.set(null);
+                    this.router.navigate(['/login']);
+                    console.log('local logout finalized');
+                }
+            })
     }
 }

@@ -2,7 +2,7 @@ import { inject, Injectable, NgZone } from "@angular/core";
 import { fetchEventSource } from "@microsoft/fetch-event-source"
 import { Subject } from "rxjs";
 
- interface PresenceDelta{
+ export interface PresenceDelta{
     userId:number;
     username:string;
     status: 'CONNECTED'|'DISCONNECTED';
@@ -50,25 +50,29 @@ export class SseService {
                 }
             },
             onmessage: (msg) => {
-                if(msg.event === 'presence-update'){
-                    this.zone.run(() => {
-                        try{
-                            const serverEvent = JSON.parse(msg.data)
+                if(!msg.data || msg.data.trim() ==='')
+                    return ;
+
+                this.zone.run(() => {
+                    try{
+                        const serverEvent = JSON.parse(msg.data)
+                        if(msg.event === 'online-users' || msg.event === 'presence-update'){
+
                             this.presenceSubject.next({
-                            userId:serverEvent.Id,
-                            username:serverEvent.name,
-                            status: serverEvent.status
-                        });
-                        }catch(error){
-                        console.error("Error while parsing sse payload :",error);
+                            userId:Number(serverEvent.Id),
+                            username:String(serverEvent.name),
+                            status: serverEvent.status as 'CONNECTED' | 'DISCONNECTED'}
+                            );
                         }
-                    });
-                }
+                    }catch(error){
+                    console.error("Error while parsing sse payload :",error);
+                    }
+                });
             },
             onclose: () => {
                 console.warn("Flow has been closed by the server.");
             },
-            onerror: (err) => {
+            onerror: (err:unknown) => {
                 if(err instanceof FatalError){
                     abortController.abort()
                     throw err;
@@ -78,5 +82,4 @@ export class SseService {
          }
         );
     }
-
 }

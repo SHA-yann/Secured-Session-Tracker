@@ -10,6 +10,7 @@ import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -34,11 +35,11 @@ public class NotificationController {
 	private UserService uServ;
 
 	@GetMapping(path = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-	public ResponseEntity<Flux<ServerSentEvent<PresenceDTO>>> streamNotifications() {
+	public ResponseEntity<Flux<ServerSentEvent<PresenceDTO>>> streamNotifications(@RequestParam("id") String connectionId) {
 		
 		Flux<ServerSentEvent<PresenceDTO>> flux = ReactiveSecurityContextHolder.getContext()
 		        .map(SecurityContext::getAuthentication)
-		        // TRÈS IMPORTANT : Si l'auth est vide, on renvoie une erreur 401 pour éviter que le flux ne reste ouvert sans authentification
+		        //Si l'auth est vide, on renvoie une erreur 401 pour éviter que le flux ne reste ouvert sans authentification
 		        .switchIfEmpty(Mono.error( new ResponseStatusException(HttpStatus.UNAUTHORIZED,"SSE connection attempts without valid authentication !")))
 		        .flatMapMany(auth -> {
 		            // Ici, on extrait le nom IMMÉDIATEMENT pour ne plus dépendre du contexte
@@ -51,7 +52,6 @@ public class NotificationController {
 			                    Flux<ServerSentEvent<PresenceDTO>> deltas = presence.getStatusDeltas()
 		                                .map(event -> ServerSentEvent.builder(event).event("presence-update")
 		                                		.build());
-			                
 			                    
 			                    Flux<ServerSentEvent<PresenceDTO>> heartbeat = Flux.interval(Duration.ofSeconds(20))
 	                                    .flatMap(i -> {
@@ -64,7 +64,7 @@ public class NotificationController {
 			                    
 			                    // ON FORCE LA SÉQUENCE :
 			                    // 1. ADD REDIS -> 2. GET LIST -> 3. MERGE DELTAS
-			                    return presence.addOnlineUser(user.getId(), user.getUsername())
+			                    return presence.addOnlineUser(user.getId(), user.getUsername(), connectionId)
 			                        .thenMany(Flux.defer(() -> {
 			                        	Flux<ServerSentEvent<PresenceDTO>> list = getOnlineList()
                 								.map(u -> {
@@ -74,12 +74,10 @@ public class NotificationController {
 			                        	return Flux.concat(list,Flux.merge(deltas,heartbeat));
 			                        }))
 			                        .doFinally(signal -> {
-			                        	presence.scheduleRemoval(user.getId(), user.getUsername());
-			                        	log.info("Session Ended for {}", username);
+			                        	presence.scheduleRemoval(user.getId(), user.getUsername(), connectionId);
 			                        });
 		            		});
 		        });
-		        
 		        
 		return ResponseEntity.ok()
 				.header("X-Accel-Buffering","no")
@@ -87,7 +85,6 @@ public class NotificationController {
 				.body(flux);
 		}
 	
-	@GetMapping("/onlineList")
 	public Flux<PresenceDTO> getOnlineList(){
 		
 		return presence.getOnlineUsers()
