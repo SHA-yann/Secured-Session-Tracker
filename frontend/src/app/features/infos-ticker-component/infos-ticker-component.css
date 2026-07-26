@@ -1,0 +1,25 @@
+.native-full-ticker {
+  display: flex !important;
+  align-items: center !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  /* L'animation prend toute la largeur */
+  animation: ticker-swipe-full 22s linear infinite;
+}
+
+@keyframes ticker-swipe-full {
+  0% {
+    /* Démarre tout à droite, pile à la limite extérieure de l'écran */
+    transform: translate3d(100vw, 0, 0);
+  }
+  100% {
+    /* Sort complètement par la gauche de l'écran */
+    transform: translate3d(-100%, 0, 0);
+  }
+}
+
+/* Pause au survol du message */
+.native-full-ticker:hover {
+  animation-play-state: paused !important;
+  cursor: pointer;
+}

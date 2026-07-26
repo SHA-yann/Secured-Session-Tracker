@@ -8,7 +8,7 @@ import { UserAvatarComponent } from '../user-avatar-component/user-avatar-compon
 @Component({
   selector: 'app-nav-bar',
   standalone:true,
-  imports: [CommonModule,RouterLink,UserAvatarComponent],
+  imports: [CommonModule, RouterLink, UserAvatarComponent],
   templateUrl: './nav-bar-component.html'
 })
 export class NavBarComponent {

@@ -1,0 +1,15 @@
+@if (messagesSignal().length > 0) {
+    <div class="w-full h-7 bg-white border-t border-slate-50 flex items-center overflow-hidden select-none relative z-10">
+      <div class="relative w-full h-full flex items-center">
+
+        @for (msg of messagesSignal(); track msg.id) {
+          <div class="absolute whitespace-nowrap flex items-center space-x-2 text-xs font-semibold text-slate-600 native-full-ticker"
+               [style.animation-delay]="msg.delay">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_6px_#3b82f6]"></span>
+            <span>{{ msg.text }}</span>
+          </div>
+        }
+
+      </div>
+    </div>
+  }
