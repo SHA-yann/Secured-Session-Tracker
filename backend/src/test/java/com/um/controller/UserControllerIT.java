@@ -68,7 +68,7 @@ class UserControllerIT {
                 .jsonPath("$.email").isEqualTo("yannsteve@ymail.fr");
 
         // 3. UPDATE
-        UpdateRequest uUp = new UpdateRequest("john@free.fr", Role.USER, Status.ACTIVE);
+        UpdateRequest uUp = new UpdateRequest("john@free.fr", Role.USER);
 
         webTestClient.put()
                 .uri("/users/{id}", userId)
@@ -90,8 +90,7 @@ class UserControllerIT {
         webTestClient.get()
                 .uri("/users/{id}", userId)
                 .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.status").isEqualTo("INACTIVE");
+                .expectStatus().isNotFound();
+                
     }
 }

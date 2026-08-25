@@ -239,7 +239,7 @@ class UserControllerTest {
 
     @Test
     void test_UpdateUser_found() {
-        UpdateRequest uUp = new UpdateRequest("yannsteve@ymail.fr", Role.ADMIN, Status.ACTIVE);
+        UpdateRequest uUp = new UpdateRequest("yannsteve@ymail.fr", Role.ADMIN);
         
         // le controlleur utilise l'ID (Long) et renvoie le User dans un Mono
         when(userService.updateUser(eq(4L), any(UpdateRequest.class), eq("admin"))).thenReturn(Mono.just(u));
@@ -261,7 +261,7 @@ class UserControllerTest {
 
     @Test
     void test_UpdateUser_notFound() {
-        UpdateRequest uUp = new UpdateRequest("john@free.fr", Role.USER, Status.INACTIVE);
+        UpdateRequest uUp = new UpdateRequest("john@free.fr", Role.USER);
         
         // Si le service renvoie une erreur ou un Mono vide
         when(userService.updateUser(eq(99L), any(UpdateRequest.class), eq("admin"))).thenReturn(Mono.empty());
