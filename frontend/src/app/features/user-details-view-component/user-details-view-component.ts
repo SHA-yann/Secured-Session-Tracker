@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, linkedSignal } from '@angular/core';
+import { Component, computed, effect, inject, input, linkedSignal, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { UserResponse, UsersApiService, UpdateUserRequestParams, UpdateRequest, RoleEnum, StatusEnum } from '../../core/api-client';
 import { AuthService } from '../../core/secure/authService';
@@ -6,10 +6,13 @@ import { CommonModule } from '@angular/common';
 import { UserAvatarComponent } from '../user-avatar-component/user-avatar-component';
 import { UserHeaderComponent } from '../user-header-component/user-header-component';
 import { UserStatsComponent } from '../user-stats-component/user-stats-component';
+import { UserCreateComponent } from '../user-create-component/user-create-component';
+import { UserListComponent } from '../user-list-component/user-list-component';
 
 @Component({
   selector: 'app-user-details-view',
-  imports: [CommonModule,ReactiveFormsModule,UserAvatarComponent,UserHeaderComponent,UserStatsComponent],
+  imports: [CommonModule,ReactiveFormsModule,UserAvatarComponent
+    ,UserHeaderComponent,UserStatsComponent],
   templateUrl: './user-details-view-component.html'
 })
 export class UserDetailsViewComponent {
@@ -18,7 +21,7 @@ export class UserDetailsViewComponent {
   public readonly authService = inject(AuthService);
 
   user = input.required<UserResponse>();
-  
+
   isEditing = linkedSignal({
     source: this.user,
     computation: () => false

@@ -13,6 +13,6 @@ class BackendApplicationTests {
      */
     @Test
     void contextLoads() {
-        // no assertions needed; test fails if context fails to load
+        // Fails if context fails to load
     }
 }

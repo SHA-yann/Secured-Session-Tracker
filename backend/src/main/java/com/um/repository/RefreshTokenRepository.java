@@ -1,5 +1,7 @@
 package com.um.repository;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,8 +26,13 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
      * @param token the refresh token string
      * @return Optional containing the RefreshToken entity if found
      */
-	@EntityGraph(attributePaths = {"user"})
-    Optional<RefreshToken> findByToken(String token);
 	
+	@EntityGraph(attributePaths = {"user"})
+    Optional<RefreshToken> findByRtToken(String token);
+	
+    @EntityGraph(attributePaths = {"user"})
 	List<RefreshToken> findByUserId(Long userId);
+	
+	@Query(value="DELETE FROM Refresh_tokens WHERE revoked = true AND expiresAt < :now",nativeQuery=true)
+	int deleteUselessTokens(@Param("now") Instant now);
 }

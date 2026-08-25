@@ -1,6 +1,6 @@
-import { Component, input } from '@angular/core';
-import { UserAvatarComponent } from '../user-avatar-component/user-avatar-component';
+import { Component, inject, input } from '@angular/core';
 import { RoleEnum, StatusEnum } from '../../core/api-client';
+import { AuthService } from '../../core/secure/authService';
 
 @Component({
   selector: 'app-user-header',
@@ -14,4 +14,5 @@ export class UserHeaderComponent {
   status = input.required<StatusEnum>();
   isSelf = input<boolean>(false);
   isEditing = input<boolean>(false);
+  auth = inject(AuthService);
 }

@@ -2,9 +2,9 @@ import { Component, inject, signal } from '@angular/core';
 import { ReactiveFormsModule, Validators, NonNullableFormBuilder } from '@angular/forms';
 import { AuthRequest } from '../../core/api-client';
 import { AuthService } from "../../core/secure/authService";
-import { NotificationService } from '../../shared/services/notification-service';
+import { NotificationService } from '../../core/services/notification-service';
 import { Router } from '@angular/router';
-import { finalize } from 'rxjs';
+import { PresenceStore } from '../../core/services/presenceStore';
 @Component({
   selector: 'app-login',
   standalone: true,
@@ -17,6 +17,7 @@ export class LoginComponent {
   private readonly authService = inject(AuthService);
   private readonly notify = inject(NotificationService);
   private readonly router = inject(Router)
+  private readonly presence = inject(PresenceStore);
 
   // 3. Déclaration et initialisation immédiate
   loginForm = this.fb.group({
@@ -36,6 +37,7 @@ export class LoginComponent {
       ).subscribe({
         next: () => {
           if(this.authService.userPayload()?.uStatus === 'ACTIVE' ){
+            this.presence.init();
             this.router.navigate(['/dashboard']);
             this.notify.show('Connected!','success');
           }else{

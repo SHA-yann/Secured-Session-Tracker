@@ -15,13 +15,6 @@ Thumbs.db
 .env
 
 
-# Dossiers de données Docker/Observabilité
-# (Évite de committer les bases de données Prometheus ou les logs Loki)
-docker/volumes/
-docker/prometheus/data/
-docker/grafana/data/
-docker/loki/data/
-
 # 3. BACKEND (Java / Maven)
 **/target/
 backend/target/

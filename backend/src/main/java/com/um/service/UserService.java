@@ -1,7 +1,5 @@
 package com.um.service;
 
-import java.util.Optional;
-
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -9,7 +7,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +32,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
+    private final NotificationService notificationService;
 
     /**
      * Constructs a UserService with required dependencies.
@@ -43,10 +41,12 @@ public class UserService {
      * @param passwordEncoder encoder for hashing user passwords
      */
     public UserService(UserRepository userRepository,@Lazy PasswordEncoder passwordEncoder, 
-    					RefreshTokenService refreshTokenService) {
+    					RefreshTokenService refreshTokenService,
+    					NotificationService notificationService) {
         this.userRepository = userRepository;
 		this.passwordEncoder = passwordEncoder;
 		this.refreshTokenService = refreshTokenService;
+		this.notificationService = notificationService;
     }
 
     /**
@@ -108,6 +108,15 @@ public class UserService {
 				}).subscribeOn(Schedulers.boundedElastic());
 	
     }
+    
+    public Mono<User> getUserByUsername(String name){
+    	
+    	return Mono.fromCallable(() -> {
+			
+    			return userRepository.findByUsername(name)
+    						.orElseThrow(() -> new UserNotFoundException("User with name " +name+ " not found"));
+    			}).subscribeOn(Schedulers.boundedElastic());
+    }
 
     /**
      * Retrieves a user by email.
@@ -136,6 +145,7 @@ public class UserService {
      * @throws UserNotFoundException if user not found
      */
     @Transactional
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or #username==principal.username")
     public Mono<User> updateUser(Long id, UpdateRequest update, String author) {
         
     	return ReactiveSecurityContextHolder.getContext()
@@ -150,18 +160,18 @@ public class UserService {
     				return Mono.fromCallable(() -> {
     					return userRepository.findById(id)
     			                .map(found -> {
-    			                	if(!isAdmin && !found.getUsername().equals(currentUsername))
+    			                	if(found.getUsername().equals(currentUsername)) {
+    			                		found.setEmail(update.email());
+        			                    found.setUpdatedBy(author);
+    			                	}
+    			                	else
     			                		throw new AccessDeniedException("You are not Owner or Admin to modify these fields");
-    			                	
-    			                    found.setEmail(update.email());
-    			                    found.setUpdatedBy(author);    			                            
 
-    			                    if (!isAdmin)
-    			                    	throw new AccessDeniedException("Only Admin can modify a role or a status");
-    			                    else{
+    			                    if (isAdmin){
     			                        found.setRole(update.role());
-    			                        found.setStatus(update.status());
-    			                    }
+    			                    }	
+    			                    else
+    			                    	throw new AccessDeniedException("Only Admin can modify a role or a status");
 
     			                    return userRepository.save(found);
     			                }).orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -171,7 +181,7 @@ public class UserService {
    }
 
     /**
-     * Deletes a user by ID.
+     * Disables a user by ID.
      *
      * @param id user ID
      * @throws UserNotFoundException if user not found
@@ -181,33 +191,43 @@ public class UserService {
     public Mono<Void> disableUser(Long id) {
         
         return Mono.fromCallable(() -> {
-					return userRepository.findById(id)
-					.orElseThrow(() -> new UserNotFoundException("User with id " + id + " not found"));
+						return userRepository.findById(id).get();
 					}).subscribeOn(Schedulers.boundedElastic())
 					.flatMap(u -> {
+						
 						u.setStatus(Status.INACTIVE);
-						refreshTokenService.revokeUserTokens(u.getId());
+						refreshTokenService.revokeAllUserTokens(id)
+						.then(notificationService.instantRemove(id, u.getUsername()));
 						return Mono.fromCallable(() -> {									
-									userRepository.save(u);
-									return u;
+										return userRepository.save(u);
 									})
 									.subscribeOn(Schedulers.boundedElastic());
 				    }).then();
-        
     }
 
     /**
-     * Finds a user by username.
+     * Enables a user by ID.
      *
-     * @param username username
-     * @return Optional containing the user
+     * @param id user ID
+     * @throws UserNotFoundException if user not found
      */
-    @Transactional(readOnly = true)
-    public Optional<User> findByName(String username) {
-        return Optional.of(userRepository.findByUsername(username)
-        		.orElseThrow(() -> new UserNotFoundException("User not found")));
+    @Transactional
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public Mono<Void> enableUser(Long id) {
+        
+        return Mono.fromCallable(() -> {
+						return userRepository.findById(id).get();
+					}).subscribeOn(Schedulers.boundedElastic())
+					.flatMap(u -> {
+						
+						u.setStatus(Status.ACTIVE);
+						return Mono.fromCallable(() -> {									
+										return userRepository.save(u);
+									})
+									.subscribeOn(Schedulers.boundedElastic());
+				    }).then();
     }
-
+    
     /**
      * Searches users by username or role with pagination.
      *
@@ -236,9 +256,10 @@ public class UserService {
     /**
      * Deletes all users and flushes the repository.
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public void wipeAll() {
         userRepository.deleteAll();
         userRepository.flush();
     }
 }
+

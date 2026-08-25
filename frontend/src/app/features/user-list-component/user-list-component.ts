@@ -2,32 +2,37 @@ import { AfterViewInit, Component, ElementRef, inject, OnInit, output, signal, v
 import { GetAllUsersRequestParams, UserResponse, UsersApiService } from '../../core/api-client';
 import { CommonModule } from '@angular/common';
 import { UserCardComponent } from '../user-card-component/user-card-component';
+import { UserCreateComponent } from '../user-create-component/user-create-component';
+import { AuthService } from '../../core/secure/authService';
 
 @Component({
   selector: 'app-user-list',
   standalone:true,
-  imports: [CommonModule,UserCardComponent],
+  imports: [CommonModule,UserCardComponent,UserCreateComponent],
   templateUrl: './user-list-component.html',
   styleUrl: './user-list-component.css'
 })
 export class UserListComponent implements OnInit,AfterViewInit{
   users = signal<UserResponse[]>([]);
   readonly userService = inject(UsersApiService);
+  auth = inject(AuthService);
   selectedUser = output<UserResponse>();
   selectedId = signal<number|undefined>(undefined);
   currentPage = signal(0);
   isLastPage = signal(false);
   isLoading = signal(false);
+  isCreateModalOpen = signal(false);
   scrollAnchor = viewChild<ElementRef>('anchor');
 
   ngOnInit(): void {
       this.loadUsers();
   }
-
   ngAfterViewInit(): void {
       this.setupIntersectionObserver();
   }
-
+    handleUserCreated(){
+    this.loadUsers();
+  }
   loadUsers():void{
     if(this.isLastPage() || this.isLoading()) return;
     this.isLoading.set(true);
@@ -35,7 +40,7 @@ export class UserListComponent implements OnInit,AfterViewInit{
     const params:GetAllUsersRequestParams = {
       pageable:{
         page:this.currentPage(),
-        size:15,
+        size:10,
         sort:['status,asc']
       }
     };

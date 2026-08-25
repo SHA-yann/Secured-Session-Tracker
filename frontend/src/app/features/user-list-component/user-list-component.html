@@ -1,14 +1,33 @@
 <div class="flex flex-col h-full bg-slate-50/30 border-r border-slate-200">
-  <div class="p-4 border-b border-slate-200 bg-white">
-    <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
-      Users <span class="text-[10px] bg-slate-100 px-2 py-0.5 rounded-full text-slate-500">{{ users().length }}</span>
-    </h2>
+  <div class="p-6 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <h2 class="text-xl font-bold text-slate-800 tracking-tight">Users</h2>
+      <span class="px-2.5 py-0.5 bg-slate-100 text-slate-500 text-xs font-bold rounded-full">
+        {{ users().length }}
+      </span>
+    </div>
+
+    @if (auth.isAdmin()) {
+      <button (click)="isCreateModalOpen.set(true)" 
+              class="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 font-semibold text-sm active:scale-115">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        New user
+      </button>
+      @if(isCreateModalOpen()){
+        <app-user-create-component
+          (closed)="isCreateModalOpen.set(false)"
+          (userCreated)="handleUserCreated()">
+        </app-user-create-component>
+      }
+    }
   </div>
 
   <div class="flex-1 overflow-y-auto pt-4 scrollbar-thin scrollbar-thumb-slate-200">
     @for (u of users(); track u.id) {
       <app-user-card 
-        [user]="u" [isSelected]="selectedId() === u.id" (select)="onUserSelect($event)">
+        [user]="u" [id]="u.id!" [isSelected]="selectedId() === u.id" (select)="onUserSelect($event)">
       </app-user-card>
     }
 

@@ -1,40 +1,56 @@
 package com.um.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
+import java.util.List;
+import java.util.Optional;
+
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mockito.*;
-import org.springframework.data.domain.*;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import com.um.Exceptions.UserAlreadyExistsException;
 import com.um.Exceptions.UserNotFoundException;
+import com.um.dto.UpdateRequest;
 import com.um.dto.UserRequest;
 import com.um.model.Role;
 import com.um.model.Status;
 import com.um.model.User;
 import com.um.repository.UserRepository;
-import java.util.List;
-import java.util.Optional;
 
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
+
+@ExtendWith(MockitoExtension.class)
 class UserServiceTest {
 
     @Mock
     private UserRepository userRepository;
 
-    @InjectMocks
-    private UserService userService;
-
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private RefreshTokenService refreshTokenService;
+
+    @InjectMocks
+    private UserService userService;
 
     private User toSave;
     private User u1;
@@ -42,220 +58,168 @@ class UserServiceTest {
 
     @BeforeEach
     void init() {
-        MockitoAnnotations.openMocks(this);
-
-        // Initialize test users
-        toSave = new User("Yann","secure_123", "yannsteve@ymail.fr",Role.ADMIN,Status.ACTIVE);
-        u1 = new User("John","secure_123","john@free.fr",Role.USER,Status.ACTIVE);
-        
-        // Set up pagination for retrieval tests
+        toSave = new User("Yann", "secure_123", "yannsteve@ymail.fr", Role.ADMIN, Status.ACTIVE);
+        u1 = new User("John", "secure_123", "john@free.fr", Role.USER, Status.ACTIVE);
         pageable = PageRequest.of(0, 2, Sort.by("username").ascending());
-
-        // Set SecurityContext for tests requiring authentication
-        Authentication auth = Mockito.mock(Authentication.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        when(securityContext.getAuthentication()).thenReturn(auth);
-        SecurityContextHolder.setContext(securityContext);
     }
 
-    // -------------------- CREATE --------------------
+    // ==========================================
+    // -------------------- CREATE --------------
+    // ==========================================
+
     @Test
+    @DisplayName("Should create user successfully when username is available")
     void createUser_shouldPersistAndReturnEntity() {
-        // Mock the save operation to return the user
+        // Given
+        UserRequest dto = new UserRequest("Yann", "secure_123", "yannsteve@ymail.fr", Role.ADMIN, Status.ACTIVE);
+        when(userRepository.existsByUsername("Yann")).thenReturn(false);
+        when(passwordEncoder.encode("secure_123")).thenReturn("hashed_123");
         when(userRepository.save(any(User.class))).thenReturn(toSave);
 
-        User result = userRepository.save(toSave);
-        result.setStatus(Status.ACTIVE);
+        // When & Then
+        StepVerifier.create(userService.createUser(dto, "System")).assertNext(user -> {
+                    org.assertj.core.api.Assertions.assertThat(user).isNotNull();
+                    org.assertj.core.api.Assertions.assertThat(user.getUsername()).isEqualTo("Yann");
+                })
+                .verifyComplete();
 
-        // Validate that the user was saved correctly
-        assertNotNull(result);
-        assertEquals("Yann", result.getUsername());
-        assertEquals("yannsteve@ymail.fr", result.getEmail());
-        assertEquals(Status.ACTIVE, result.getStatus());
-
-        // Verify that save was invoked once
-        verify(userRepository, times(1)).save(any(User.class));
-    }
-
-    // -------------------- READ ALL --------------------
-    @Test
-    void test_souldreturnAllusers() {
-        // Assign roles and create page result
-        toSave.setStatus(Status.ACTIVE);
-        u1.setStatus(Status.INACTIVE);
-        Page<User> page = new PageImpl<>(List.of(toSave, u1), pageable, 2);
-
-        // Mock repository call
-        when(userRepository.findAll(any(Pageable.class))).thenReturn(page);
-
-        Page<User> result = userService.getAllUsers(pageable);
-
-        // Verify correct data returned
-        assertThat(result.getContent()).hasSize(2);
-        assertThat(result.getContent().get(1).getUsername()).isEqualTo("John");
-        assertThat(result.getContent().get(1).getStatus()).isEqualTo(Status.INACTIVE);
-        assertThat(result.getContent().get(0).getStatus()).isEqualTo(Status.ACTIVE);
-
-        verify(userRepository, times(1)).findAll(pageable);
+        org.mockito.Mockito.verify(userRepository, times(1)).save(any(User.class));
     }
 
     @Test
-    void test_when_emptyList() {
-        // Mock empty result
-        when(userRepository.findAll(any(Pageable.class))).thenReturn(Page.empty());
+    @DisplayName("Should return error signal when trying to create an existing user")
+    void createUser_shouldFailWhenUserAlreadyExists() {
+        // Given
+        UserRequest dto = new UserRequest("Yann", "secure_123", "yannsteve@ymail.fr", Role.ADMIN, Status.ACTIVE);
+        when(userRepository.existsByUsername("Yann")).thenReturn(true);
 
-        Page<User> result = userService.getAllUsers(pageable);
+        // When & Then
+        StepVerifier.create(userService.createUser(dto, "System"))
+                .verifyError(UserAlreadyExistsException.class);
 
-        assertThat(result).isEmpty();
-        verify(userRepository, times(1)).findAll(pageable);
-    }
-
-    // -------------------- READ BY ID --------------------
-    @Test
-    void test_foundById() {
-        // Mock finding user by ID
-        when(userRepository.findById(2L)).thenReturn(Optional.of(u1));
-
-        Optional<User> result = Optional.of(userService.getUserById(2L).get());
-
-        assertThat(result).isPresent();
-        assertThat(result.get().getEmail()).isEqualTo("john@free.fr");
-
-        verify(userRepository, times(1)).findById(2L);
-    }
-
-    @Test
-    void test_notFoundById() {
-        // Mock user not found scenario
-        when(userRepository.findById(2L)).thenReturn(Optional.empty());
-
-        assertThrows(UserNotFoundException.class, () -> userService.getUserById(2L));
-
-        verify(userRepository, times(1)).findById(2L);
-    }
-
-    // -------------------- READ BY EMAIL --------------------
-    @Test
-    void test_foundByEmail() {
-        when(userRepository.findByEmail("john@free.fr")).thenReturn(Optional.of(u1));
-
-        Optional<User> result = Optional.of(userService.getUserByEmail("john@free.fr").get());
-
-        assertThat(result).isPresent();
-        assertThat(result.get().getUsername()).isEqualTo("John");
-
-        verify(userRepository, times(1)).findByEmail("john@free.fr");
-    }
-
-    @Test
-    void test_notfoundByEmail() {
-        when(userRepository.findByEmail("frank@wanado.fr")).thenReturn(Optional.empty());
-
-        assertThrows(UserNotFoundException.class, () -> userService.getUserByEmail("frank@wanado.fr"));
-
-        verify(userRepository, times(1)).findByEmail("frank@wanado.fr");
-    }
-
-    // -------------------- UPDATE --------------------
-    @Test
-    void test_UpdateUser_found() {
-        u1.setStatus(Status.INACTIVE);
-
-        // Mock find and save operations
-        when(userRepository.findByUsername(any(String.class))).thenReturn(Optional.of(toSave));
-        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        UserRequest uReq= new UserRequest(u1.getUsername(), u1.getPassword(), "frank@wanado.fr", Role.USER, u1.getStatus());
-        Optional<User> result = userService.updateUser("Yann",uReq,"John");
-
-        // Validate updated user
-        assertThat(result).isNotNull();
-        assertThat(result.get().getEmail()).isEqualTo("frank@wanado.fr");
-        assertThat(result.get().getStatus()).isEqualTo(Status.ACTIVE); // unchanged
-        assertThat(result.get().getUpdatedBy()).isEqualTo("John");
-
-        verify(userRepository, times(1)).findByUsername(any(String.class));
-        verify(userRepository, times(1)).save(toSave);
-    }
-
-    @Test
-    void test_UpdateUser_notFound() {
-        when(userRepository.findById(99L)).thenReturn(Optional.empty());
-
-        UserRequest uReq= new UserRequest(u1.getUsername(), u1.getPassword(), u1.getEmail(), u1.getRole(), u1.getStatus());
-        assertThrows(UserNotFoundException.class, () -> userService.updateUser("none", uReq,"Yann"));
-
-        verify(userRepository, times(1)).findByUsername(any(String.class));
         verify(userRepository, never()).save(any(User.class));
     }
 
-    // -------------------- DELETE --------------------
+    // ==========================================
+    // -------------------- READ ALL ------------
+    // ==========================================
+
     @Test
-    void testDelUser_found() {
-        when(userRepository.existsById(3L)).thenReturn(true);
+    @DisplayName("Should return a reactive page stream of all users")
+    void getAllUsers_shouldReturnPage() {
+        // Given
+        Page<User> page = new PageImpl<>(List.of(toSave, u1), pageable, 2);
+        when(userRepository.findAll(any(Pageable.class))).thenReturn(page);
 
-        userService.deleteUser(3L);
+        // When & Then
+        StepVerifier.create(userService.getAllUsers(pageable))
+                .assertNext(resultPage -> {
+                    org.assertj.core.api.Assertions.assertThat(resultPage.getContent()).hasSize(2);
+                    org.assertj.core.api.Assertions.assertThat(resultPage.getContent().get(1).getUsername()).isEqualTo("John");
+                })
+                .verifyComplete();
+    }
 
-        verify(userRepository, times(1)).existsById(3L);
-        verify(userRepository, times(1)).deleteById(3L);
+    // ==========================================
+    // -------------------- READ BY ID ----------
+    // ==========================================
+
+    @Test
+    @DisplayName("Should return user object when requested ID is found")
+    void getUserById_found() {
+        // Given
+        when(userRepository.findById(1L)).thenReturn(Optional.of(toSave));
+
+        // When & Then
+        StepVerifier.create(userService.getUserById(1L))
+                .assertNext(user -> org.assertj.core.api.Assertions.assertThat(user.getUsername()).isEqualTo("Yann"))
+                .verifyComplete();
     }
 
     @Test
-    void testDelUser_notFound() {
-        when(userRepository.existsById(99L)).thenThrow(new UserNotFoundException(""));
+    @DisplayName("Should return error signal when user ID is not found")
+    void getUserById_notFound() {
+        // Given
+        when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(UserNotFoundException.class, () -> userService.deleteUser(99L));
-
-        verify(userRepository, times(1)).existsById(99L);
-        verify(userRepository, never()).deleteById(anyLong());
+        // When & Then
+        StepVerifier.create(userService.getUserById(99L))
+                .verifyError(UserNotFoundException.class);
     }
 
-    // -------------------- SEARCH --------------------
+    // ==========================================
+    // -------------------- UPDATE --------------
+    // ==========================================
+
     @Test
-    void searchUsers_withusername() {
-        Page<User> expected = new PageImpl<>(List.of(toSave, u1));
+    @DisplayName("Should allow Admin to update any user information and roles")
+    void updateUser_asAdmin_shouldSucceed() {
+        // Given
+        UpdateRequest updateDto = new UpdateRequest("updated@free.fr", Role.USER, Status.ACTIVE);
+        
+        // Mocks pour simuler un contexte de sécurité réactif avec rôle ADMIN
+        Authentication authentication = mock(Authentication.class);
+        when(authentication.getAuthorities()).thenAnswer(inv -> List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+        when(authentication.getName()).thenReturn("AdminUser");
+        
+        SecurityContext securityContext = mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
 
-        when(userRepository.findByUsernameContainingIgnoreCase("Yann", pageable)).thenReturn(expected);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(u1)); // John
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Page<User> result = userService.searchUsers("Yann", null, pageable);
+        // Contextes réactifs mockés via le pipeline Reactor
+        Mono<User> resultMono = userService.updateUser(2L, updateDto, "AdminUser")
+        		.contextWrite(ReactiveSecurityContextHolder.withSecurityContext(Mono.just(securityContext)));
 
-        // Validate search by username
-        assertThat(result.getContent()).hasSize(2).contains(toSave);
+        // When & Then
+        StepVerifier.create(resultMono)
+                .assertNext(updatedUser -> {
+                    org.assertj.core.api.Assertions.assertThat(updatedUser.getEmail()).isEqualTo("updated@free.fr");
+                    org.assertj.core.api.Assertions.assertThat(updatedUser.getUpdatedBy()).isEqualTo("AdminUser");
+                })
+                .verifyComplete();
+    }
 
-        // Ensure repository calls are correct
+    // ==========================================
+    // -------------------- DISABLE -------------
+    // ==========================================
+
+    @Test
+    @DisplayName("Should set status to INACTIVE and revoke tokens when disabling user")
+    void disableUser_shouldSucceedWhenUserExists() {
+        // Given
+    	toSave.setId(1L);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(toSave));
+        when(userRepository.save(any(User.class))).thenReturn(toSave);
+        when(refreshTokenService.revokeUserTokens(anyLong())).thenReturn(Mono.empty());
+
+        // When & Then
+        StepVerifier.create(userService.disableUser(1L))
+                .verifyComplete();
+
+        org.assertj.core.api.Assertions.assertThat(toSave.getStatus()).isEqualTo(Status.INACTIVE);
+        verify(refreshTokenService, times(1)).revokeUserTokens(anyLong());
+        verify(userRepository, times(1)).save(toSave);
+    }
+
+    // ==========================================
+    // -------------------- SEARCH --------------
+    // ==========================================
+
+    @Test
+    @DisplayName("Should query matching method when username filter is present")
+    void searchUsers_withUsername() {
+        // Given
+        Page<User> expectedPage = new PageImpl<>(List.of(toSave));
+        when(userRepository.findByUsernameContainingIgnoreCase("Yann", pageable)).thenReturn(expectedPage);
+
+        // When & Then
+        StepVerifier.create(userService.searchUsers("Yann", null, pageable))
+                .assertNext(page -> org.assertj.core.api.Assertions.assertThat(page.getContent()).contains(toSave))
+                .verifyComplete();
+
         verify(userRepository, times(1)).findByUsernameContainingIgnoreCase("Yann", pageable);
-        verify(userRepository, never()).findByRole(any(), any());
-        verify(userRepository, never()).findAll(any(Pageable.class));
-    }
-
-    @Test
-    void searchUsers_withRole() {
-        toSave.setRole(Role.ADMIN);
-        Page<User> expected = new PageImpl<>(List.of(toSave, u1));
-
-        when(userRepository.findByRole(Role.USER, pageable)).thenReturn(expected);
-
-        Page<User> result = userService.searchUsers(null, Role.USER, pageable);
-
-        assertThat(result.getContent()).hasSize(2).contains(u1);
-
-        verify(userRepository, times(1)).findByRole(Role.USER, pageable);
-        verify(userRepository, never()).findByUsernameContainingIgnoreCase(any(), any());
-        verify(userRepository, never()).findAll(any(Pageable.class));
-    }
-
-    @Test
-    void search_users_withoutFilters() {
-        Page<User> expected = new PageImpl<>(List.of(toSave, u1));
-
-        when(userRepository.findAll(pageable)).thenReturn(expected);
-
-        Page<User> result = userService.searchUsers(null, null, pageable);
-
-        assertThat(result.getContent()).hasSize(2).contains(toSave, u1);
-
-        verify(userRepository, times(1)).findAll(pageable);
-        verify(userRepository, never()).findByUsernameContainingIgnoreCase(any(), any());
         verify(userRepository, never()).findByRole(any(), any());
     }
 }

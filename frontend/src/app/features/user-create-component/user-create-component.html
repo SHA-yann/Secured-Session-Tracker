@@ -1,0 +1,73 @@
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 bg-slate-900/60 backdrop-blur-sm">
+
+  <div class="bg-white w-full max-w-lg flex flex-col rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in transform transition-all duration-200">
+
+    <div class="px-6 py-4 flex justify-between items-center shrink-0">
+      <h2 class="text-xl font-bold text-slate-800">Add a user</h2>
+      <button (click)="close()" class="text-slate-400 hover:text-slate-600 transition-colors">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="p-6 overflow-y-auto max-h-[70vh] custom-scrollbar">
+      <ng-content></ng-content>
+    </div>
+
+    <form [formGroup]="userForm" (ngSubmit)="onSubmit()" class="p-6 space-y-4">
+
+      <div class="space-y-1">
+        <label class="text-sm font-semibold text-slate-700">Username</label>
+        <input formControlName="username" type="text" 
+               class="w-full px-4 py-2 bg-slate-100 border-none rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+      </div>
+
+      <div class="space-y-1">
+        <label class="text-sm font-semibold text-slate-700">Email contact</label>
+        <input formControlName="email" type="email" 
+               class="w-full px-4 py-2 bg-slate-100 border-none rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+      </div>
+
+      <div class="space-y-1">
+        <label class="text-sm font-semibold text-slate-700">Temporary password</label>
+        <input formControlName="password" type="text"
+               class="w-full px-4 py-2 bg-slate-100 border-none rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-sm">
+      </div>
+
+      @let pwd=userForm.controls.password;
+      @if (pwd.invalid && pwd.touched){
+        <p class="text-[11px] text-red-500 mt-1 italic animate-pulse">
+          Password must contain at least 8 characters, including one uppercase, one lowercase, one number and one special character
+        </p>
+      }
+
+      <div class="grid grid-cols-2 gap-4">
+        <div class="space-y-1">
+          <label class="text-sm font-semibold text-slate-700">Role</label>
+          <select formControlName="role" class="w-full px-3 py-2 bg-slate-100 border-none rounded-lg outline-none">
+            <option [value]="RoleEnum.User">User</option>
+            <option [value]="RoleEnum.Admin">Administrator</option>
+          </select>
+        </div>
+        <div class="space-y-1">
+          <label class="text-sm font-semibold text-slate-700">Status</label>
+          <select formControlName="status" class="w-full px-3 py-2 bg-slate-100 border-none rounded-lg outline-none">
+            <option [value]="StatusEnum.Active">Active</option>
+            <option [value]="StatusEnum.Inactive">Inactive</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="flex gap-3 pt-4">
+        <button type="button" (click)="close()" 
+                class="flex-1 py-2 font-semibold text-slate-500 hover:bg-slate-100 rounded-xl transition-all">
+          Cancel
+        </button>
+        <button type="submit" [disabled]="userForm.invalid || isSubmitting()"
+                class="flex-1 py-2 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 disabled:bg-slate-300 transition-all shadow-md">
+          {{ isSubmitting() ? 'Saving...' : 'Submit' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+

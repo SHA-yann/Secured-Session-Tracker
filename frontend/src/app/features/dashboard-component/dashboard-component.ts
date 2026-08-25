@@ -4,12 +4,13 @@ import { UserDetailsViewComponent } from "../user-details-view-component/user-de
 import { UserListComponent } from "../user-list-component/user-list-component";
 import { AuthService } from "../../core/secure/authService";
 import { NavBarComponent } from "../nav-bar-component/nav-bar-component";
-import { PresenceStore } from "../../shared/services/presenceStore";
+import { InfosTickerComponent } from "../infos-ticker-component/infos-ticker-component";
 
 @Component({
     selector:'app-dashboard',
     standalone:true,
-    imports: [UserDetailsViewComponent, UserListComponent, NavBarComponent],
+    imports: [UserDetailsViewComponent, UserListComponent,
+    NavBarComponent, InfosTickerComponent],
     templateUrl:'./dashboard-component.html'
 })
 
@@ -17,7 +18,6 @@ export class DashboardComponent implements OnInit{
     
     private readonly userService = inject(UsersApiService);
     private readonly authService = inject(AuthService);
-    private readonly presenceStore = inject(PresenceStore);
     selectedUser = signal<UserResponse|null>(null);
      
 
@@ -25,14 +25,15 @@ export class DashboardComponent implements OnInit{
         const reqParam:GetUserByIdRequestParams={
             id:this.authService.userId()!
         }
-        this.userService.getUserById(reqParam)
+        if(this.authService.isAdmin())
+            this.userService.getUserById(reqParam)
                         .subscribe({
                             next:(found) => {
                                 this.selectedUser.set(found);
                             },
                             error:(err) => console.log('An error occured during retrieval of user information at login',err)
                         });
-        this.presenceStore.init();
+        
     }
 
     UserSelection(user:UserResponse){

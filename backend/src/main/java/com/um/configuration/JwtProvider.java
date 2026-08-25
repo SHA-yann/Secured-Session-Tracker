@@ -15,10 +15,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
-import com.um.model.Status;
 import com.um.repository.UserRepository;
-import com.um.service.UserService;
-
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -162,6 +159,10 @@ public class JwtProvider {
     
     public Mono<Boolean> isBlacklisted(String token) {
     	
-    	return redisTemplate.hasKey("Blacklist:"+token);
+    	return redisTemplate.hasKey("Blacklist:"+token)
+    			.onErrorResume(ex ->{
+    				log.warn("Redis unavailable, degrade mode activated : {}", ex.getMessage());
+    				return Mono.just(false);
+    			});
     }
 }

@@ -5,9 +5,8 @@ import java.security.Principal;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
+import org.springframework.data.web.PagedModel;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.web.bind.annotation.*;
@@ -53,7 +52,6 @@ public class UserController {
         @ApiResponse(responseCode = "403", description = "Forbidden, insufficient permissions")
     })
     @PostMapping("/users")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public Mono<ResponseEntity<UserResponse>> register(
             
             @RequestBody UserRequest user) {
@@ -81,17 +79,18 @@ public class UserController {
         @ApiResponse(responseCode = "403", description = "Forbidden, insufficient permissions")
     })
     @GetMapping("/users")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN','ROLE_USER')")
-    public Mono<ResponseEntity<Page<UserResponse>>> getAllUsers(
+    public Mono<ResponseEntity<PagedModel<UserResponse>>> getAllUsers(
             @Parameter(description = "Pagination information") 
              Pageable pageable) {
 
-        return userService.getAllUsers(pageable)
+        return Mono.defer(() -> userService.getAllUsers(pageable))
 							.map(usersPage -> {
 								Page<UserResponse> dtoPage = usersPage.map(UserResponse::fromEntity);
-								return ResponseEntity.ok(dtoPage);
-							})
-							.defaultIfEmpty(ResponseEntity.noContent().build());
+								PagedModel<UserResponse> pMod = new PagedModel<>(dtoPage);
+								return pMod;
+								})
+							.flatMap(pMod -> Mono.just(ResponseEntity.ok(pMod)))
+							.switchIfEmpty(Mono.just(ResponseEntity.noContent().build()));
         
     }
 
@@ -106,7 +105,6 @@ public class UserController {
         @ApiResponse(responseCode = "403", description = "Forbidden")
     })
     @GetMapping("/users/{id}")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public Mono<ResponseEntity<UserResponse>> getUserById(
             @Parameter(description = "ID of the user to retrieve", required = true)
             @PathVariable Long id) {
@@ -129,7 +127,6 @@ public class UserController {
         @ApiResponse(responseCode = "403", description = "Forbidden")
     })
     @GetMapping("/users/mail/{email}")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public Mono<ResponseEntity<UserResponse>> getUserByEmail(
             @Parameter(description = "Email of the user to retrieve", required = true)
             @PathVariable String email) {
@@ -151,8 +148,7 @@ public class UserController {
         @ApiResponse(responseCode = "404", description = "User not found"),
         @ApiResponse(responseCode = "403", description = "Forbidden")
     })
-    @PutMapping("/users/{id}")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or #username==principal.username")
+    @PatchMapping("/users/{id}")
     public Mono<ResponseEntity<UserResponse>> updateUser(
             @Parameter(description = "id of the user to update", required = true)
             @PathVariable Long id,
@@ -166,8 +162,8 @@ public class UserController {
         		.flatMap(author -> 
         				userService.updateUser(id, update, author)
                         .map(UserResponse::fromEntity)
-                        .map(ResponseEntity::ok));
-                        
+                        .map(ResponseEntity::ok))
+        				.defaultIfEmpty(ResponseEntity.notFound().build());
         		
     }
 
@@ -182,12 +178,20 @@ public class UserController {
         @ApiResponse(responseCode = "403", description = "Forbidden")
     })
     @DeleteMapping("/users/{id}")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public Mono<ResponseEntity<Void>> disableUser(
-            @Parameter(description = "ID of the user to delete", required = true)
+            @Parameter(description = "ID of the user to disable", required = true)
             @PathVariable Long id) {
 
         return userService.disableUser(id)
+        				  .thenReturn(ResponseEntity.noContent().build());
+    }
+    
+    @DeleteMapping("/users/{id}/enable")
+    public Mono<ResponseEntity<Void>> enableUser(
+            @Parameter(description = "ID of the user to disable", required = true)
+            @PathVariable Long id) {
+
+        return userService.enableUser(id)
         				  .thenReturn(ResponseEntity.noContent().build());
     }
 
@@ -201,8 +205,7 @@ public class UserController {
         @ApiResponse(responseCode = "403", description = "Forbidden")
     })
     @GetMapping("/users/search")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN','ROLE_USER')")
-    public Mono<ResponseEntity<Page<UserResponse>>> searchUsers(
+    public Mono<ResponseEntity<PagedModel<UserResponse>>> searchUsers(
             @Parameter(description = "Username filter", required = false) @RequestParam(required = false) String username,
             @Parameter(description = "Role filter", required = false) @RequestParam(required = false) Role role,
             @Parameter(description = "Pagination information") Pageable pageable) {
@@ -210,8 +213,10 @@ public class UserController {
         return userService.searchUsers(username, role, pageable)
         					.map(usersPage -> {
     							Page<UserResponse> dtoPage = usersPage.map(UserResponse::fromEntity);
-    							return ResponseEntity.ok(dtoPage);
+    							PagedModel<UserResponse> pMod = new PagedModel<>(dtoPage);
+    							return ResponseEntity.ok(pMod);
     						});
 
     }
 }
+

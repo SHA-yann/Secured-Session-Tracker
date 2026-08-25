@@ -1,9 +1,5 @@
 package com.um.controller;
 
-import java.util.Map;
-import org.springframework.http.ResponseCookie;
-import org.springframework.http.HttpCookie;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -11,10 +7,11 @@ import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ServerWebExchange;
 
-import com.um.Exceptions.ResourceNotFoundException;
+import com.um.configuration.CookieProvider;
 import com.um.dto.AuthRequest;
 import com.um.dto.AuthResponse;
 import com.um.service.AuthService;
@@ -29,7 +26,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 /**
  * REST controller handling authentication operations:
@@ -69,16 +65,9 @@ public class AuthController {
             @RequestBody AuthRequest request,
             @Parameter(hidden = true) ServerWebExchange exchange) {
 
-        	return authService.login(request).map(res -> {String token = (String)res.get(1);
-														ResponseCookie cookie = (ResponseCookie)res.get(2);
-														exchange.getResponse().addCookie(cookie);
-											            
-											        	return ResponseEntity.ok()
-																 .body(new AuthResponse(token)
-																);
-														}
-        	
-        										)
+        	return authService.login(request).map(res -> {exchange.getResponse().addCookie(res.cookie());
+											        	return ResponseEntity.ok(new AuthResponse(res.token()));
+														})
         										.onErrorResume(e -> Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED)
         																.build()));
         	
@@ -101,18 +90,14 @@ public class AuthController {
             ServerWebExchange exchange) {
 
     	if (refreshToken == null || refreshToken.isEmpty()) {
-    		log.warn("No refresh cooki found!");
+    		log.warn("No refresh cookie found!");
     		return Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
     	}
     	
         return authService.refresh(refreshToken)
-						  .map(res -> {String token = (String)res.get(1);
-							ResponseCookie cookie = (ResponseCookie)res.get(2);
-							exchange.getResponse().addCookie(cookie);
-							return ResponseEntity.ok()
-		        					 .body(new AuthResponse(token)
-		        						);
-							});
+						  .map(res -> {exchange.getResponse().addCookie(res.cookie());
+							return ResponseEntity.ok(new AuthResponse(res.token()));
+						   });
         		
     }
 
@@ -126,23 +111,18 @@ public class AuthController {
         @ApiResponse(responseCode = "404", description = "User not found or already logged out")
     })
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                description = "JSON body containing the username key", required = true
-            )
-            @RequestBody Map<String, String> req) {
+    public Mono<ResponseEntity<Void>> logout(
+            @CookieValue(name = "refresh_token", required = false) String refreshToken,
+            @RequestParam("id") String sseSessionId ,
+            ServerWebExchange exchange) {
 
-        String username = req.get("username");
-        boolean success = authService.logout(username);
-
-        if (!success) {
-            throw new ResourceNotFoundException("Session not found");
-        }
-
-        return ResponseEntity.noContent()
-                .header(HttpHeaders.SET_COOKIE,
-                        "refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0")
-                .build();
+               exchange.getResponse().beforeCommit(() -> Mono.fromRunnable(() ->
+	            	   exchange.getResponse().addCookie(CookieProvider.clearCookie("refresh_token"))
+	               ));
+	          
+               return authService.logout(refreshToken,sseSessionId)
+            		   .then(Mono.just(ResponseEntity.noContent().build()));
+               
     }
 }
 

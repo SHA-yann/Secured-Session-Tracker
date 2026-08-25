@@ -2,6 +2,8 @@ package com.um.configuration;
 
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
@@ -13,7 +15,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ReactiveAuthenticationManager;
 import org.springframework.security.authentication.UserDetailsRepositoryReactiveAuthenticationManager;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
@@ -31,6 +32,7 @@ import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 import org.springframework.web.server.WebFilter;
 
 import com.um.service.MyUserDetailsService;
+import com.um.service.RateLimitingService;
 
 /**
  * Configures Spring Security for the application.
@@ -41,8 +43,9 @@ import com.um.service.MyUserDetailsService;
 @EnableReactiveMethodSecurity
 public class SecurityConfig {
 
-    private final JwtAuthFilter jwtAuthFilter;
-    private final RateLimitingFilter rateLimitingFilter;
+    private final RateLimitingService rateLimitingService;
+    private final JwtProvider jwtProvider;
+	private final MyUserDetailsService userDetailsService;
 
     /**
      * Creates a new {@code SecurityConfig}.
@@ -50,10 +53,12 @@ public class SecurityConfig {
      * @param jwtAuthFilter the JWT authentication filter
      * @param userDetailsService the user details service (injected for future use)
      */
-    public SecurityConfig(@Lazy JwtAuthFilter jwtAuthFilter,
-    							RateLimitingFilter rateLimitingFilter, @Lazy MyUserDetailsService userDetailsService) {
-        this.jwtAuthFilter = jwtAuthFilter;
-        this.rateLimitingFilter = rateLimitingFilter;
+    public SecurityConfig( RateLimitingService rateLimitingService,
+    						@Lazy MyUserDetailsService userDetailsService,
+    						JwtProvider jwtProvider) {
+        this.rateLimitingService = rateLimitingService;
+		this.jwtProvider = jwtProvider;
+		this.userDetailsService = userDetailsService;
     }
 
     /**
@@ -86,21 +91,27 @@ public class SecurityConfig {
      */
     @Bean
      SecurityWebFilterChain securityFilterChain(ServerHttpSecurity http,CorsConfigurationSource corsSource) {
+    	
+    	JwtAuthFilter jwtAuthFilter = new JwtAuthFilter(jwtProvider, userDetailsService);
+    	RateLimitingFilter rateLimitingFilter = new RateLimitingFilter(rateLimitingService);
+    	
         http
             .cors(cors -> cors.configurationSource(corsSource))
             .csrf(ServerHttpSecurity.CsrfSpec::disable)
             .authorizeExchange(auth -> auth
-                .pathMatchers("/notifications/stream","/auth/login","/auth/refresh","/swagger-ui/**","/v3/api-docs/**","/webjars/**","/actuator/prometheus","/actuator/health/**","/actuator/info").permitAll()
-                .pathMatchers(HttpMethod.POST, "/users").hasAnyAuthority("ROLE_ADMIN","ROLE_USER")
-                .pathMatchers(HttpMethod.GET, "/users","/users/**").hasAuthority("ROLE_ADMIN")
-                .pathMatchers(HttpMethod.PUT, "/users/**").hasAuthority("ROLE_ADMIN")
+                .pathMatchers("/notifications/**","/auth/**","/swagger-ui/**","/v3/api-docs/**","/webjars/**","/actuator/prometheus","/actuator/health/**","/actuator/info").permitAll()
+                .pathMatchers(HttpMethod.POST, "/users").hasAuthority("ROLE_ADMIN")
+                .pathMatchers(HttpMethod.GET, "/users","/users/**").hasAnyAuthority("ROLE_ADMIN","ROLE_USER")
+                .pathMatchers(HttpMethod.PUT, "/users/**").hasAnyAuthority("ROLE_ADMIN","ROLE_USER")
                 .pathMatchers(HttpMethod.DELETE, "/users/**").hasAuthority("ROLE_ADMIN")
                 .anyExchange().authenticated()
             )
             .exceptionHandling(exceptionHandling -> exceptionHandling
             		.authenticationEntryPoint((exchange, e) ->{
             			exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-            			exchange.getResponse().getHeaders().remove(HttpHeaders.WWW_AUTHENTICATE);
+            			if(!exchange.getResponse().isCommitted()) { // Vérifie si la réponse n'a pas encore été engagée, sinon, erreur non blocante
+            				exchange.getResponse().getHeaders().remove(HttpHeaders.WWW_AUTHENTICATE);// Supprime l'en-tête WWW-Authenticate pour éviter les prompts de navigateur
+            			}
             			return exchange.getResponse().setComplete();
             		})
             )
@@ -115,11 +126,27 @@ public class SecurityConfig {
     @Order(Ordered.HIGHEST_PRECEDENCE)
     WebFilter logFilter() {
     	return (exchange, chain) ->{
-    		System.out.println(">>>Requete entrante:"+exchange.getRequest().getPath());
-    		System.out.println("Headers:"+exchange.getRequest().getHeaders());
-    		return chain.filter(exchange);
+    		
+    		return chain.filter(exchange)
+    				.doFirst(() -> {
+    					System.out.println(">>>Requete entrante:"+exchange.getRequest().getPath());
+    					System.out.println("Headers:"+exchange.getRequest().getHeaders());
+    				});
+    		
     	};
     }
+    
+    /* @Bean
+    @Order(Ordered.HIGHEST_PRECEDENCE) // forcer l'écriture d'un Log de niveau ERROR avec la stack trace complète en déclarant un WebFilter de diagnostic dédié, placé tout au début de ta chaîne
+    WebFilter debugStackTraceFilter() {
+        Logger log = LoggerFactory.getLogger("DEBUG_STACK_TRACE");
+        return (exchange, chain) -> chain.filter(exchange)
+                .onErrorResume(ex -> {
+                    // Force l'impression de la stack trace complète dans la console de l'IDE
+                    log.error("=== CRASH CAPTURÉ AU SOMMET DU PIPELINE WEBFLUX ===", ex);
+                    return Mono.error(ex); // Relance l'erreur pour ne pas casser le flux nominal
+                });
+    } */
 
     /**
      * Configures Cross-Origin Resource Sharing (CORS) to allow frontend applications.
@@ -134,9 +161,9 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:4200"));
+        configuration.setAllowedOrigins(List.of("http://localhost:4200","http://localhost"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE","OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization","Content-Type","Accept"));
+        configuration.setAllowedHeaders(List.of("Authorization","Content-Type","Accept","Cache-Control"));
         configuration.setAllowCredentials(true);
         configuration.setExposedHeaders(List.of("Set-Cookie"));
 
@@ -160,3 +187,4 @@ public class SecurityConfig {
     	return authManager;
     }
 }
+

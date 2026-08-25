@@ -29,4 +29,8 @@ public class RateLimitingService {
 		return path.contains("/auth/login") || path.contains("/auth/register");
 	}
 	
+	public void clearBuckets() {
+	    this.buckets.clear();
+	}
+	
 }

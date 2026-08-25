@@ -24,7 +24,7 @@ import lombok.*;
 @Table(
     name = "Refresh_tokens",
     indexes = {
-        @Index(name = "idx_rt_token", columnList = "token", unique = true),
+        @Index(name = "idx_rt_token", columnList = "rtToken", unique = true),
         @Index(name = "idx_rt_user", columnList = "user_id")
     }
 )
@@ -37,7 +37,7 @@ public class RefreshToken {
 
     /** Unique token string (UUID), immutable once created */
     @Column(nullable = false, unique = true, updatable = false)
-    private String token;
+    private String rtToken;
 
     /** The user this refresh token is associated with */
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
@@ -60,7 +60,7 @@ public class RefreshToken {
      * @param expiresAt the timestamp at which the token expires
      */
     public RefreshToken(User user, Instant expiresAt) {
-        this.token = UUID.randomUUID().toString();
+        this.rtToken = UUID.randomUUID().toString();
         this.user = user;
         this.expiresAt = expiresAt;
     }
