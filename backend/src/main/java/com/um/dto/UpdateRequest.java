@@ -1,8 +1,6 @@
 package com.um.dto;
 
 import com.um.model.Role;
-import com.um.model.Status;
-
 import io.swagger.v3.oas.annotations.media.Schema;
 
 public record UpdateRequest(
@@ -11,10 +9,7 @@ public record UpdateRequest(
         String email,
 
         @Schema(description = "Role assigned to the user", example = "ADMIN")
-        Role role,
-
-        @Schema(description = "Status of the user account", example = "ACTIVE")
-        Status status
+        Role role
 ) {
 
 }

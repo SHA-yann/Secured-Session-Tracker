@@ -11,8 +11,11 @@
 	<groupId>com.um</groupId>
 	<artifactId>backend</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>backend</name>
-	<description>Access management demo Api</description>
+	<name>Secured-Session-Tracker-API</name>
+	<description>Centralized, real-time connection state tracking leveraging a highly available Redis mapping.
+		API hardening through strict request filtering, JWT, Role-Based Access Control (RBAC),
+		 and Rate Limiting.
+	</description>
 	<url/>
 	<licenses>
 		<license/>

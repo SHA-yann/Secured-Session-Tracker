@@ -2,11 +2,11 @@ import { computed, inject, Injectable, signal } from "@angular/core";
 import { jwtDecode } from 'jwt-decode';
 import { AuthenticationApiService } from "../api-client/api/api";
 import { AuthRequest } from "../api-client";
-import { BehaviorSubject, tap } from "rxjs";
+import { tap } from "rxjs";
 import { PresenceStore } from "../services/presenceStore";
 import { Router } from "@angular/router";
 import { HttpClient } from "@angular/common/http";
-import { env } from "../../../env";
+import { environment } from "../../../environments/environment";
 
 export interface TokenPayload {
     sub: string; // username
@@ -66,7 +66,7 @@ export class AuthService{
     logout(): void{
 
         this.presence.disconnect();
-        this.http.post<void>(`${env.backUrl}/auth/logout?id=${this.presence.connectionId}`,{})
+        this.http.post<void>(`${environment.backUrl}/auth/logout?id=${this.presence.connectionId}`,{})
             .subscribe({
                 next:(response) => {
                     console.log('Backend logout successful :'+`${response}`);

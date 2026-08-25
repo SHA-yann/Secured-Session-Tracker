@@ -159,6 +159,10 @@ public class JwtProvider {
     
     public Mono<Boolean> isBlacklisted(String token) {
     	
-    	return redisTemplate.hasKey("Blacklist:"+token);
+    	return redisTemplate.hasKey("Blacklist:"+token)
+    			.onErrorResume(ex ->{
+    				log.warn("Redis unavailable, degrade mode activated : {}", ex.getMessage());
+    				return Mono.just(false);
+    			});
     }
 }

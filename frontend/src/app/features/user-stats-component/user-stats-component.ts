@@ -3,6 +3,8 @@ import { Component, computed, inject, input, signal } from '@angular/core';
 import { StatusEnum, UsersApiService } from '../../core/api-client';
 import { AuthService } from '../../core/secure/authService';
 import { NotificationService } from '../../core/services/notification-service';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-user-stats',
@@ -21,6 +23,7 @@ export class UserStatsComponent {
   auth = inject(AuthService);
   userApi = inject(UsersApiService);
   notify = inject(NotificationService);
+  http = inject(HttpClient);
   isProcessing = signal(false);
 
   formattedCreation = computed(() => {
@@ -50,5 +53,20 @@ export class UserStatsComponent {
         this.isProcessing.set(false);
       }
     })
+  }
+  onEnableUser(id:number | undefined): void{
+    if(!id) return;
+    this.isProcessing.set(true);
+    this.http.delete<void>(`${environment.backUrl}/users/{id}/enable`)
+        .subscribe({
+          next:() =>{
+        this.notify.show('User enabled',"success");
+        this.isProcessing.set(false);
+      },
+      error:(err) =>{
+        this.notify.show('User enabled',"error");
+        this.isProcessing.set(false);
+      }
+        })
   }
 }

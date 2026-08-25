@@ -160,18 +160,18 @@ public class UserService {
     				return Mono.fromCallable(() -> {
     					return userRepository.findById(id)
     			                .map(found -> {
-    			                	if(!isAdmin && !found.getUsername().equals(currentUsername))
+    			                	if(found.getUsername().equals(currentUsername)) {
+    			                		found.setEmail(update.email());
+        			                    found.setUpdatedBy(author);
+    			                	}
+    			                	else
     			                		throw new AccessDeniedException("You are not Owner or Admin to modify these fields");
-    			                	
-    			                    found.setEmail(update.email());
-    			                    found.setUpdatedBy(author);    			                            
 
-    			                    if (!isAdmin)
-    			                    	throw new AccessDeniedException("Only Admin can modify a role or a status");
-    			                    else{
+    			                    if (isAdmin){
     			                        found.setRole(update.role());
-    			                        found.setStatus(update.status());
-    			                    }
+    			                    }	
+    			                    else
+    			                    	throw new AccessDeniedException("Only Admin can modify a role or a status");
 
     			                    return userRepository.save(found);
     			                }).orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -181,7 +181,7 @@ public class UserService {
    }
 
     /**
-     * Deletes a user by ID.
+     * Disables a user by ID.
      *
      * @param id user ID
      * @throws UserNotFoundException if user not found
@@ -203,9 +203,31 @@ public class UserService {
 									})
 									.subscribeOn(Schedulers.boundedElastic());
 				    }).then();
-        
     }
 
+    /**
+     * Enables a user by ID.
+     *
+     * @param id user ID
+     * @throws UserNotFoundException if user not found
+     */
+    @Transactional
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public Mono<Void> enableUser(Long id) {
+        
+        return Mono.fromCallable(() -> {
+						return userRepository.findById(id).get();
+					}).subscribeOn(Schedulers.boundedElastic())
+					.flatMap(u -> {
+						
+						u.setStatus(Status.ACTIVE);
+						return Mono.fromCallable(() -> {									
+										return userRepository.save(u);
+									})
+									.subscribeOn(Schedulers.boundedElastic());
+				    }).then();
+    }
+    
     /**
      * Searches users by username or role with pagination.
      *

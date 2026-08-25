@@ -1,34 +1,166 @@
 
+networks:
+  backend-net:
+    driver: bridge
+  frontend-net:
+    driver: bridge
+  monitoring-net:
+    driver: bridge
+
+volumes:
+  postgre_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+  loki_data:
+
 services:
-  db:
+
+# COUCHE DATA & SESSIONS (Postgres & Redis)
+
+  postgre-db:
     image: postgres:17-alpine
-    container_name: db
+    container_name: postgre-db
     restart: always
     environment:
       POSTGRES_DB: usermanagement
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
+    networks:
+      - backend-net
     ports:
       - "5432:5432"
+
+    volumes:
+      - postgre_data:/var/lib/postgresql/data
+      - ./src/main/resources/data.sql:/docker-entrypoint-initdb.d/import.sql
+
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d usermanagement"]
       interval: 15s
       timeout: 5s
       retries: 3
-  back:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
+    
+  redis-cache:
+    image: redis:latest
+    container_name: redis-cache
+    restart: always
+    networks:
+      - backend-net
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+# COUCHE APPLICATIONS (Java / Angular)
+
+  backend-api:
+    image: sst-back:1.0
+    container_name: backend-api
+    networks:
+      backend-net:
+      frontend-net:
+      monitoring-net:
+
+    ports:
+      - "8080:8080"
+      - "8087:8087"
+
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/usermanagement
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgre-db:5432/usermanagement
       SPRING_DATASOURCE_USERNAME: ${DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
+      SPRING_DATA_REDIS_HOST: redis-cache
+
     depends_on:
-     db:
-       condition: service_healthy
-    container_name: api
+      postgre-db:
+        condition: service_healthy
+      redis-cache:
+        condition: service_healthy
+
+  front-app:
+    image: sst-front:1.0
+    container_name: front-app
+    networks:
+      - frontend-net
     ports:
-      - "8080:8080"
+      - "80:80"
+    depends_on:
+      - backend-api
     
+# PILE D'OBSERVABILITÉ (Prometheus, Loki, Grafana)
+
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:1.5.1
+    container_name: nginx-exporter
+    command:
+      - -nginx.scrape-uri=http://front-app:80/stub_status
+    ports:
+      - "9113:9113"
+    depends_on:
+      - front-app
+    networks:
+      - monitoring-net
+
+  prometheus:
+    image: quay.io/prometheus/prometheus:v3.10.0
+    pull_policy: missing
+    container_name: prometheus
+    networks:
+      - monitoring-net
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+  
+  loki:
+    image: grafana/loki:3.6.13
+    pull_policy: missing
+    container_name: loki
+    networks:
+      - monitoring-net
+    ports:
+      - "3100:3100"
+    volumes:
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+
+# Collecter les logs des conteneurs pour loki
+  promtail:
+    image: grafana/promtail:3.5.1
+    pull_policy: missing
+    container_name: promtail
+    networks:
+      - monitoring-net
+    user: "0:0"
+    volumes:
+      - ./observability/promtail.yml:/etc/promtail/config.yml
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/config.yml
     
+  grafana:
+    image: grafana/grafana:12.4.2
+    pull_policy: missing
+    container_name: grafana
+    networks:
+      - monitoring-net
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./observability/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./observability/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - grafana_data:/var/lib/grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    depends_on:
+      - prometheus
+      - loki

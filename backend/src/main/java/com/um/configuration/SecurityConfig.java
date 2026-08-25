@@ -34,8 +34,6 @@ import org.springframework.web.server.WebFilter;
 import com.um.service.MyUserDetailsService;
 import com.um.service.RateLimitingService;
 
-import reactor.core.publisher.Mono;
-
 /**
  * Configures Spring Security for the application.
  * Sets up authentication, authorization, JWT filter, and CORS.
@@ -56,7 +54,8 @@ public class SecurityConfig {
      * @param userDetailsService the user details service (injected for future use)
      */
     public SecurityConfig( RateLimitingService rateLimitingService,
-    						@Lazy MyUserDetailsService userDetailsService, JwtProvider jwtProvider) {
+    						@Lazy MyUserDetailsService userDetailsService,
+    						JwtProvider jwtProvider) {
         this.rateLimitingService = rateLimitingService;
 		this.jwtProvider = jwtProvider;
 		this.userDetailsService = userDetailsService;
@@ -93,7 +92,7 @@ public class SecurityConfig {
     @Bean
      SecurityWebFilterChain securityFilterChain(ServerHttpSecurity http,CorsConfigurationSource corsSource) {
     	
-    	JwtAuthFilter jwtAuthFilter = new JwtAuthFilter(jwtProvider,userDetailsService);
+    	JwtAuthFilter jwtAuthFilter = new JwtAuthFilter(jwtProvider, userDetailsService);
     	RateLimitingFilter rateLimitingFilter = new RateLimitingFilter(rateLimitingService);
     	
         http
@@ -162,7 +161,7 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:4200"));
+        configuration.setAllowedOrigins(List.of("http://localhost:4200","http://localhost"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE","OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization","Content-Type","Accept","Cache-Control"));
         configuration.setAllowCredentials(true);

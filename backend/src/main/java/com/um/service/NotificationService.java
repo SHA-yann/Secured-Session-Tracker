@@ -5,15 +5,18 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.slf4j.MDC;
 import org.springframework.data.domain.Range;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.um.dto.PresenceDTO;
+import com.um.model.Role;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -91,10 +94,9 @@ public class NotificationService {
 	        			return redisTemplate.opsForZSet().add(ONLINE_USERS_KEY, redisValue, now)
         	                .then(Mono.defer(() -> {
         	                	if(currentCount == 1 && isNewAdded > 0) {
-        	                		log.info("{} session(s) for {}",currentCount,username);
         	                		return publishStatus(userId, username, "CONNECTED");
         	                	}
-        	                	log.info("{} session(s) for {}",currentCount,username);
+        	                	log.info("{} session(s) for {}",currentCount,username);        	                	
         	                	return Mono.empty();
         	                }));
     				});
@@ -121,7 +123,7 @@ public class NotificationService {
 						            .flatMap(d -> {
 						            	
 						                pendingRemovals.remove(userId);
-						                return removeOnlineUser(userId, username,connectionId);
+						                return removeOnlineUser(userId, username, connectionId);
 						            })
 						            .subscribe();
 
@@ -168,7 +170,8 @@ public class NotificationService {
 		        .onErrorResume(e ->{
 					log.error("Redis unavailable! downgrade mode activated");
 					return Mono.empty();
-				});
+				})
+		        ;
     }
     
 	private Mono<Void> publishStatus(Long userId, String username, String status){

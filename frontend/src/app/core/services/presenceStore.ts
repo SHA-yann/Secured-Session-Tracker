@@ -1,10 +1,10 @@
 import { computed, DestroyRef, inject, Injectable, signal } from "@angular/core";
 import { PresenceDelta, SseService } from "./sse-sevice";
-import { env } from "../../../env";
 import { NotificationService } from "./notification-service";
 import { HttpClient } from "@angular/common/http";
 import { Subscription } from "rxjs";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
+import { environment } from "../../../environments/environment";
 
 @Injectable({ providedIn: 'root'})
 export class PresenceStore {
@@ -45,7 +45,7 @@ export class PresenceStore {
 
             this.connectionId = `conn_${Date.now()}`;
 
-            this.sseService.connect(`${env.backUrl}/notifications/stream?id=${this.connectionId}`,token,this.abortController);
+            this.sseService.connect(`${environment.backUrl}/notifications/stream?id=${this.connectionId}`,token,this.abortController);
             
             this.sseSubscription =this.sseService.presence$
                 .pipe(takeUntilDestroyed(this.destroyRef))

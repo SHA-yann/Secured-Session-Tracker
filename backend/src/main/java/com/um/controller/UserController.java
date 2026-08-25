@@ -25,7 +25,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 /**
  * Controller that exposes REST endpoints for managing users.
@@ -149,7 +148,7 @@ public class UserController {
         @ApiResponse(responseCode = "404", description = "User not found"),
         @ApiResponse(responseCode = "403", description = "Forbidden")
     })
-    @PutMapping("/users/{id}")
+    @PatchMapping("/users/{id}")
     public Mono<ResponseEntity<UserResponse>> updateUser(
             @Parameter(description = "id of the user to update", required = true)
             @PathVariable Long id,
@@ -184,6 +183,15 @@ public class UserController {
             @PathVariable Long id) {
 
         return userService.disableUser(id)
+        				  .thenReturn(ResponseEntity.noContent().build());
+    }
+    
+    @DeleteMapping("/users/{id}/enable")
+    public Mono<ResponseEntity<Void>> enableUser(
+            @Parameter(description = "ID of the user to disable", required = true)
+            @PathVariable Long id) {
+
+        return userService.enableUser(id)
         				  .thenReturn(ResponseEntity.noContent().build());
     }
 

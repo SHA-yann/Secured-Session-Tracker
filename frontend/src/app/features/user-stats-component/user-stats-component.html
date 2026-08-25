@@ -35,21 +35,36 @@
         </span>
       </div>
 
-      @if (auth.isAdmin() && !status().startsWith('IN') ) {
-        <button (click)="onDisableUser(userId())" [disabled]="isProcessing()"
-        class="text-[10px] uppercase font-bold text-red-600 hover:text-red-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1">
+      @if (auth.isAdmin()){
+        @if(!status().startsWith('IN') ) {
+          <button (click)="onDisableUser(userId())" [disabled]="isProcessing()"
+          class="text-[10px] uppercase font-bold text-red-600 hover:text-red-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1">
 
-        @if (isProcessing()) {
-          <span class="animate-pulse">Processing...</span>
-        } @else {
-          <span>Disable</span>
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636" />
-          </svg>
+          @if (isProcessing()) {
+            <span class="animate-pulse">Processing...</span>
+          } @else {
+            <span>Disable</span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636" />
+            </svg>
+          }
+          </button>
+        }@else{
+          <button (click)="onEnableUser(userId())" [disabled]="isProcessing()"
+          class="text-[10px] uppercase font-bold text-red-600 hover:text-red-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1">
+
+          @if (isProcessing()) {
+            <span class="animate-pulse">Processing...</span>
+          } @else {
+            <span>Enable</span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636" />
+            </svg>
+          }
+          </button>
         }
-        </button>
-  }
-</div>
+      }
+    </div>
   }
 
 </div>

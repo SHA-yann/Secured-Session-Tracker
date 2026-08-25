@@ -30,7 +30,7 @@ public class JwtAuthFilter implements WebFilter {
      * @param jwtProvider JWT utility for token parsing and validation
      * @param userDetailsService Service to load user details
      */
-    public JwtAuthFilter(JwtProvider jwtProvider, @Lazy MyUserDetailsService userDetailsService) {
+    public JwtAuthFilter(JwtProvider jwtProvider,  @Lazy MyUserDetailsService userDetailsService) {
         this.jwtProvider = jwtProvider;
         this.userDetailsService = userDetailsService;
     }
@@ -59,7 +59,6 @@ public class JwtAuthFilter implements WebFilter {
             username = jwtProvider.extractUsername(token);
             status = jwtProvider.extractAllClaims(token).get("uStatus").toString();
         } catch (Exception e) {
-            
             return chain.filter(exchange); // Invalid token, skip authentication
         }
 
@@ -70,8 +69,9 @@ public class JwtAuthFilter implements WebFilter {
         
 		return jwtProvider.isBlacklisted(token)
 				.flatMap(blocked -> {
-					if(blocked)
+					if(blocked) {
 						return chain.filter(exchange);
+					}
 					
 		        	return userDetailsService.findByUsername(username)
 						.flatMap(userDetails ->{
