@@ -15,7 +15,6 @@ Thumbs.db
 # On garde les fichiers d'exemple pour aider les collègues
 !.env.example
 
-
 # 3. BACKEND (Java / Maven)
 **/target/
 backend/target/
@@ -28,10 +27,8 @@ frontend/dist/
 frontend/.qodo/
 frontend/.angular/
 frontend/.editorconfig
-frontend/package-lock.json
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+
 
 # 5. KUBERNETES & INFRA
 *.kubeconfig
