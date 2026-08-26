@@ -14,6 +14,7 @@ on:
       - 'backend/src/**'
       - 'backend/pom.xml'
       - 'backend/Dockerfile'
+  workflow_dispatch:
       
 jobs:
   build:

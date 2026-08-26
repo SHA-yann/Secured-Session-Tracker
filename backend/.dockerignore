@@ -11,16 +11,13 @@ mvnw.cmd
 **/*.log
 
 # --- Docker & CI/CD ---
-**/docker/
 .git/
 .github/
 .gitignore
-docker-compose.yml
-Dockerfile
 
 # --- IDEs & OS ---
-**/.idea/
 **/.vscode/
+**/.qodo/
 **/.settings/
 **/.classpath
 **/.project
@@ -28,5 +25,5 @@ Dockerfile
 .DS_Store
 Thumbs.db
 
-# --- Environnement ---
+# --- Environment ---
 **/.env
