@@ -3,11 +3,11 @@ FROM node:22-alpine AS build
 WORKDIR /app
 
 # Copie des fichiers de configuration pour optimiser le cache des layers Docker
-COPY package*.json ./
+COPY frontend/package*.json ./
 RUN npm install
 
 # Copie de tout le code source et compilation en mode production
-COPY . .
+COPY frontend/ .
 RUN npm run build
 
 # Serve: Avec Nginx
