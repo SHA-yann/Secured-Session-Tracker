@@ -67,7 +67,7 @@ jobs:
       - name: Push docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./backend
+          context: .
           file: backend/Dockerfile
           push: ${{github.event_name !='pull_request'}}
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/sst-back:latest
