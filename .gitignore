@@ -1,5 +1,4 @@
 # 1. OS & IDE (VS Code, STS/Eclipse, IntelliJ)
-.idea/
 .vscode/
 .settings/
 .classpath
@@ -13,6 +12,8 @@ Thumbs.db
 
 # 2. SECRETS & CONFIGURATION (Crucial)
 .env
+# On garde les fichiers d'exemple pour aider les collègues
+!.env.example
 
 
 # 3. BACKEND (Java / Maven)
@@ -37,8 +38,3 @@ yarn-error.log*
 certs/
 secrets/*.yaml
 !secrets/template-*.yaml
-
-# 6. EXCEPTIONS (Whitelist)
-# ==========================================
-# On garde les fichiers d'exemple pour aider les collègues
-!.env.example
