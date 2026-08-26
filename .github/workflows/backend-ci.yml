@@ -69,18 +69,11 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Vérifier la présence physique des fichiers
-        run: |
-          echo "=== Contenu de la racine ==="
-          ls -la
-          echo "=== Contenu du dossier backend ==="
-          ls -la backend/
-
       - name: Build & Push docker image
         uses: docker/build-push-action@v6
         with:
           context: ./backend
-          file: Dockerfile
+          file: ./backend/Dockerfile
           push: ${{github.event_name !='pull_request'}}
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/sst-back:latest
           cache-from: type=gha
