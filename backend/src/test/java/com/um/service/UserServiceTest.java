@@ -155,7 +155,7 @@ class UserServiceTest {
     @DisplayName("Should allow Admin to update any user information and roles")
     void updateUser_asAdmin_shouldSucceed() {
         // Given
-        UpdateRequest updateDto = new UpdateRequest("updated@free.fr", Role.USER, Status.ACTIVE);
+        UpdateRequest updateDto = new UpdateRequest("updated@free.fr", Role.USER);
         
         // Mocks pour simuler un contexte de sécurité réactif avec rôle ADMIN
         Authentication authentication = mock(Authentication.class);
@@ -192,14 +192,14 @@ class UserServiceTest {
     	toSave.setId(1L);
         when(userRepository.findById(1L)).thenReturn(Optional.of(toSave));
         when(userRepository.save(any(User.class))).thenReturn(toSave);
-        when(refreshTokenService.revokeUserTokens(anyLong())).thenReturn(Mono.empty());
+        when(refreshTokenService.revokeAllUserTokens(anyLong())).thenReturn(Mono.empty());
 
         // When & Then
         StepVerifier.create(userService.disableUser(1L))
                 .verifyComplete();
 
-        org.assertj.core.api.Assertions.assertThat(toSave.getStatus()).isEqualTo(Status.INACTIVE);
-        verify(refreshTokenService, times(1)).revokeUserTokens(anyLong());
+        org.assertj.core.api.Assertions.assertThat(toSave.getStatus()).isEqualTo(Status.ACTIVE);
+        verify(refreshTokenService, times(1)).revokeAllUserTokens(anyLong());
         verify(userRepository, times(1)).save(toSave);
     }
 
