@@ -82,8 +82,8 @@ jobs:
       - name: Build & Push docker image
         uses: docker/build-push-action@v6
         with:
-          context: ./frontend
-          file: Dockerfile
+          context: .
+          file: ./frontend/Dockerfile
           push: ${{github.event_name !='pull_request'}}
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/sst-front:latest
           cache-from: type=gha
