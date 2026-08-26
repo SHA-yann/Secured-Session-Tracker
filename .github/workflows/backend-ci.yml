@@ -65,11 +65,11 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Push docker image
+      - name: Build & Push docker image
         uses: docker/build-push-action@v6
         with:
-          context: .
-          file: ./backend/Dockerfile
+          context: ./backend
+          file: Dockerfile
           push: ${{github.event_name !='pull_request'}}
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/sst-back:latest
           cache-from: type=gha
