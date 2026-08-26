@@ -24,6 +24,10 @@ env:
   # Force le moteur d'exécution des actions vers Node 24
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
+env:
+  # Force le moteur d'exécution des actions vers Node 24
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
   build:
     runs-on: ubuntu-latest
