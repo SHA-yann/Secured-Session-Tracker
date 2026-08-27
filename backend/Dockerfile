@@ -3,7 +3,7 @@ FROM maven:3.9-eclipse-temurin-17-alpine AS build
 RUN addgroup -S springgroup && adduser -S springuser -G springgroup
 WORKDIR /app
 COPY pom.xml .
-COPY src ./src
+COPY /src ./src
 RUN mvn clean package -DskipTests
 
 # Stage 2 : Run the application

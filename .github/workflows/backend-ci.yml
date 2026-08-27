@@ -49,6 +49,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
@@ -65,11 +69,11 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Push docker image
-        uses: docker/build-push-action@v5
+      - name: Build & Push docker image
+        uses: docker/build-push-action@v6
         with:
-          context: .
-          file: backend/Dockerfile
+          context: ./backend
+          file: ./backend/Dockerfile
           push: ${{github.event_name !='pull_request'}}
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/sst-back:latest
           cache-from: type=gha

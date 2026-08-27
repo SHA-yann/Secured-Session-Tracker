@@ -16,13 +16,6 @@ on:
       - 'frontend/src/**/*.html'
       - 'frontend/src/**/*.css'
   workflow_dispatch:
-env:
-  # Force le moteur d'exécution des actions vers Node 24
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-
-env:
-  # Force le moteur d'exécution des actions vers Node 24
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 env:
   # Force le moteur d'exécution des actions vers Node 24
@@ -67,6 +60,9 @@ jobs:
     needs: build
     steps: 
 
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
@@ -87,7 +83,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: frontend/Dockerfile
+          file: ./frontend/Dockerfile
           push: ${{github.event_name !='pull_request'}}
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/sst-front:latest
           cache-from: type=gha
