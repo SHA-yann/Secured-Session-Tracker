@@ -1,4 +1,4 @@
-import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
+import { ApplicationConfig, inject, provideAppInitializer, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideRouter,withComponentInputBinding } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { BASE_PATH } from './core/api-client';
@@ -6,16 +6,18 @@ import { BASE_PATH } from './core/api-client';
 import { routes } from './app.routes';
 import { authInterceptor } from './core/secure/authInterceptor';
 import { errorInterceptor } from './core/secure/errorInterceptor';
-import { environment } from '../environments/environment';
+import { ConfigService } from './core/services/urlconfig';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes,withComponentInputBinding()),
     provideHttpClient(withInterceptors([authInterceptor,errorInterceptor])),
+    provideAppInitializer(() => inject(ConfigService).loadConfig()),
     {
       provide: BASE_PATH,
-      useValue: environment.backUrl
+      useFactory: (configService:ConfigService) => configService.apiUrl,
+      deps:[ConfigService]
     }
   ]
 };
