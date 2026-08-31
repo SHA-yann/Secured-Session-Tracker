@@ -1,5 +1,5 @@
 <div 
-  (click)="select.emit(user())"
+  (click)="userStore.selectUser(user())"
   [class.opacity-50]="!isOnLine()"
   [class]="isSelected() ? 'bg-blue-600 text-white shadow-lg shadow-blue-100' : 'bg-white hover:bg-slate-50 text-slate-600'"
   class="group flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 cursor-pointer mb-3 mx-4">

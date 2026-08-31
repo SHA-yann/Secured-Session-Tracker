@@ -5,6 +5,7 @@ import { UserListComponent } from "../user-list-component/user-list-component";
 import { AuthService } from "../../core/secure/authService";
 import { NavBarComponent } from "../nav-bar-component/nav-bar-component";
 import { InfosTickerComponent } from "../infos-ticker-component/infos-ticker-component";
+import { UserStore } from "../../core/services/userStore";
 
 @Component({
     selector:'app-dashboard',
@@ -18,7 +19,9 @@ export class DashboardComponent implements OnInit{
     
     private readonly userService = inject(UsersApiService);
     private readonly authService = inject(AuthService);
-    selectedUser = signal<UserResponse|null>(null);
+    private readonly userStore = inject(UserStore);
+
+    selectedUser = this.userStore.selectedUser;
      
 
     ngOnInit(): void {
@@ -29,14 +32,10 @@ export class DashboardComponent implements OnInit{
             this.userService.getUserById(reqParam)
                         .subscribe({
                             next:(found) => {
-                                this.selectedUser.set(found);
+                                this.userStore.selectUser(found);
                             },
                             error:(err) => console.log('An error occured during retrieval of user information at login',err)
                         });
         
-    }
-
-    UserSelection(user:UserResponse){
-        this.selectedUser.set(user);
     }
 }

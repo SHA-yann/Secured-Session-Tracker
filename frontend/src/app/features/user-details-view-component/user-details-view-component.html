@@ -1,11 +1,12 @@
 <div class="flex flex-col min-h-full bg-slate-50/50 rounded-[2rem] shadow-2xl shadow-slate-200/50 overflow-hidden border-none">
 
   <div class="p-6 md:p-10 bg-white shadow-sm">
+
     <div class="flex flex-col lg:flex-row items-center gap-6 md:gap-10">
 
       <div class="shrink-0 transform transition-transform hover:scale-105 duration-300">
         <app-user-avatar 
-          [username]="user().username || ''" 
+          [username]="user()?.username || ''" 
           [size]="'xl'" 
           class="shadow-2xl shadow-blue-500/20 rounded-3xl">
         </app-user-avatar>
@@ -13,20 +14,21 @@
 
       <div class="flex-1 w-full">
         <app-user-header 
-          [username]="user().username ?? ''" [role]="user().role!" 
+          [username]="user()?.username ?? ''" [role]="user()?.role!" 
           [isSelf]="isSelf()" [isEditing]="isEditing()"
           (editToggle)="toggleEdit()" (save)="saveChanges()" 
-          [email]="user().email ?? ''" [status]="user().status!">
+          [email]="user()?.email ?? ''" [status]="user()?.status!">
         </app-user-header>
       </div>
     </div>
+
   </div>
 
   <div class="p-4 md:p-6">
     <app-user-stats 
-      [userId]="user().id!" [status]="user().status!" [isSelf]="isSelf()"
-      [createdBy]="user().createdBy ?? ''" [updatedBy]="user().updatedBy ?? ''"
-      [createdAt]="user().createdAt ?? ''" [updatedAt]="user().createdAt ?? ''">
+      [userId]="user()?.id!" [status]="user()?.status!" [isSelf]="isSelf()"
+      [createdBy]="user()?.createdBy ?? ''" [updatedBy]="user()?.updatedBy ?? ''"
+      [createdAt]="user()?.createdAt ?? ''" [updatedAt]="user()?.createdAt ?? ''">
     </app-user-stats>
   </div>
 
@@ -50,7 +52,7 @@
                 class="w-full px-5 py-4 bg-slate-50 rounded-2xl border-2 border-transparent focus:bg-white focus:border-blue-500/20 focus:ring-4 focus:ring-blue-500/5 transition-all outline-none text-slate-700 font-bold shadow-inner">
             } @else {
               <div class="py-3 px-1 text-slate-700 font-bold text-lg decoration-blue-500/30 underline-offset-8 underline decoration-2 transition-all">
-                {{ user().email }}
+                {{ user()?.email }}
               </div>
             }
           </div>
@@ -72,7 +74,7 @@
           } @else {
             <div class="flex items-center">
                <span class="px-4 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm font-black uppercase tracking-tighter shadow-sm shadow-blue-100">
-                 {{ user().role }}
+                 {{ user()?.role }}
                </span>
             </div>
           }
@@ -81,19 +83,19 @@
         <div class="lg:col-span-2 mt-6 p-6 bg-slate-50/50 rounded-2xl grid grid-cols-2 md:grid-cols-4 gap-6">
           <div class="flex flex-col gap-1">
             <span class="text-[9px] font-black text-slate-400 uppercase">Created By</span>
-            <span class="text-xs text-slate-700 font-bold italic">{{ user().createdBy }}</span>
+            <span class="text-xs text-slate-700 font-bold italic">{{ user()?.createdBy }}</span>
           </div>
           <div class="flex flex-col gap-1">
             <span class="text-[9px] font-black text-slate-400 uppercase">Created At</span>
-            <span class="text-xs text-slate-700 font-bold">{{ user().createdAt | date:'shortDate' }}</span>
+            <span class="text-xs text-slate-700 font-bold">{{ user()?.createdAt | date:'shortDate' }}</span>
           </div>
           <div class="flex flex-col gap-1 md:text-right">
             <span class="text-[9px] font-black text-slate-400 uppercase">Updated By</span>
-            <span class="text-xs text-slate-700 font-bold italic">{{ user().updatedBy }}</span>
+            <span class="text-xs text-slate-700 font-bold italic">{{ user()?.updatedBy }}</span>
           </div>
           <div class="flex flex-col gap-1 md:text-right">
             <span class="text-[9px] font-black text-slate-400 uppercase">Updated At</span>
-            <span class="text-xs text-slate-700 font-bold">{{ user().updatedAt | date:'medium' }}</span>
+            <span class="text-xs text-slate-700 font-bold">{{ user()?.updatedAt | date:'medium' }}</span>
           </div>
         </div>
       </form>

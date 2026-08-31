@@ -1,9 +1,10 @@
-import { AfterViewInit, Component, ElementRef, inject, OnInit, output, signal, viewChild } from '@angular/core';
+import { AfterViewInit, Component, computed, ElementRef, inject, OnInit, output, signal, viewChild } from '@angular/core';
 import { GetAllUsersRequestParams, UserResponse, UsersApiService } from '../../core/api-client';
 import { CommonModule } from '@angular/common';
 import { UserCardComponent } from '../user-card-component/user-card-component';
 import { UserCreateComponent } from '../user-create-component/user-create-component';
 import { AuthService } from '../../core/secure/authService';
+import { UserStore } from '../../core/services/userStore';
 
 @Component({
   selector: 'app-user-list',
@@ -13,11 +14,13 @@ import { AuthService } from '../../core/secure/authService';
   styleUrl: './user-list-component.css'
 })
 export class UserListComponent implements OnInit,AfterViewInit{
-  users = signal<UserResponse[]>([]);
-  readonly userService = inject(UsersApiService);
+  private readonly userService = inject(UsersApiService);
+  private readonly userStore = inject(UserStore);
   auth = inject(AuthService);
-  selectedUser = output<UserResponse>();
-  selectedId = signal<number|undefined>(undefined);
+
+  readonly users = this.userStore.users;
+  readonly selectedUser = this.userStore.selectedUser;
+  selectedId = computed (() => this.selectedUser()?.id ?? 0);
   currentPage = signal(0);
   isLastPage = signal(false);
   isLoading = signal(false);
@@ -46,7 +49,7 @@ export class UserListComponent implements OnInit,AfterViewInit{
     };
     this.userService.getAllUsers(params).subscribe({
         next:(page) => {
-          this.users.update(prev => [...prev,...page.content ?? []]);
+          this.userStore.setUsers(page.content ?? []);
           if(page.last)
             this.isLastPage.set(page.last);
           this.currentPage.update(p => p+1);
@@ -70,8 +73,4 @@ export class UserListComponent implements OnInit,AfterViewInit{
       observer.observe(anchor);
   }
 
-  onUserSelect(user:UserResponse): void{
-    this.selectedId.set(user.id);
-    this.selectedUser.emit(user);
-  }
 }
