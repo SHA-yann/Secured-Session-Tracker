@@ -6,8 +6,7 @@ import { CommonModule } from '@angular/common';
 import { UserAvatarComponent } from '../user-avatar-component/user-avatar-component';
 import { UserHeaderComponent } from '../user-header-component/user-header-component';
 import { UserStatsComponent } from '../user-stats-component/user-stats-component';
-import { UserCreateComponent } from '../user-create-component/user-create-component';
-import { UserListComponent } from '../user-list-component/user-list-component';
+import { UserStore } from '../../core/services/userStore';
 
 @Component({
   selector: 'app-user-details-view',
@@ -18,15 +17,16 @@ import { UserListComponent } from '../user-list-component/user-list-component';
 export class UserDetailsViewComponent {
   private readonly fb = inject(FormBuilder);
   private readonly userService = inject(UsersApiService);
-  public readonly authService = inject(AuthService);
+  readonly authService = inject(AuthService);
+  private readonly userStore = inject(UserStore);
 
-  user = input.required<UserResponse>();
+  user = this.userStore.selectedUser;
 
   isEditing = linkedSignal({
     source: this.user,
     computation: () => false
   })
-  isSelf = computed(() => this.user().username === this.authService.username());
+  isSelf = computed(() => this.user()?.username === this.authService.username());
 
   profileForm = this.fb.group({
     email:['',[Validators.required, Validators.email]],
@@ -35,22 +35,20 @@ export class UserDetailsViewComponent {
   });
 
   constructor(){
-    const userWatcher = computed(() =>{
-      const u = this.user();
+
+    effect(() => {
+      const u = this.user()!;
       this.profileForm.patchValue({
         email: u.email,
         role: u.role,
         status: u.status
       });
-      return u;
-    });
-
-    effect(() => userWatcher());
+    })
   }
 
   toggleEdit():void{
     if(this.isEditing()){
-      const u = this.user();
+      const u = this.user()!;
       this.profileForm.patchValue({
         email: u.email,
         role: u.role,
@@ -77,13 +75,14 @@ export class UserDetailsViewComponent {
       }
 
     const updateReqParam:UpdateUserRequestParams = {
-      id : this.user().id!,
+      id : this.user()?.id!,
       updateRequest : updateData
     };
 
       this.userService.updateUser(updateReqParam)
                       .subscribe({
                         next:(updated) => {
+                          this.userStore.updateUser(updated);
                           this.isEditing.set(false);
                           console.log('User {} updated',updated.username);
                         },

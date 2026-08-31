@@ -1,10 +1,11 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, inject, input, linkedSignal, model, Output, signal } from '@angular/core';
 import { StatusEnum, UsersApiService } from '../../core/api-client';
 import { AuthService } from '../../core/secure/authService';
 import { NotificationService } from '../../core/services/notification-service';
 import { HttpClient } from '@angular/common/http';
-import { environment } from '../../../environments/environment';
+import { ConfigService } from '../../core/services/urlconfig';
+import { UserStore } from '../../core/services/userStore';
 
 @Component({
   selector: 'app-user-stats',
@@ -21,11 +22,16 @@ export class UserStatsComponent {
   updatedAt = input.required<string>();
   isSelf = input<boolean>(false);
   auth = inject(AuthService);
-  userApi = inject(UsersApiService);
-  notify = inject(NotificationService);
-  http = inject(HttpClient);
+  private readonly userApi = inject(UsersApiService);
+  private readonly notify = inject(NotificationService);
+  private readonly http = inject(HttpClient);
+  private readonly configService = inject(ConfigService);
+  private readonly userStore = inject(UserStore);
   isProcessing = signal(false);
 
+  deletionButtonText = computed(() => {
+    return this.status() === StatusEnum.Inactive ? 'Enable' : 'Disable';
+  })
   formattedCreation = computed(() => {
     const date = this.createdAt();
     return date ? new Date(date).toLocaleDateString('fr-FR', { 
@@ -42,14 +48,16 @@ export class UserStatsComponent {
 
   onDisableUser(id:number | undefined): void{
     if(!id) return;
+    
     this.isProcessing.set(true);
     this.userApi.deleteUser({id}).subscribe({
       next:() =>{
+        this.userStore.updateUserStatus(id,StatusEnum.Inactive);
         this.notify.show('User disabled',"success");
         this.isProcessing.set(false);
       },
       error:(err) =>{
-        this.notify.show('User disabled',"error");
+        this.notify.show(`Disabling error:${err}`,"error");
         this.isProcessing.set(false);
       }
     })
@@ -57,16 +65,17 @@ export class UserStatsComponent {
   onEnableUser(id:number | undefined): void{
     if(!id) return;
     this.isProcessing.set(true);
-    this.http.delete<void>(`${environment.backUrl}/users/{id}/enable`)
+    this.http.delete<void>(`${this.configService.apiUrl}/users/${id}/enable`)
         .subscribe({
           next:() =>{
-        this.notify.show('User enabled',"success");
-        this.isProcessing.set(false);
-      },
-      error:(err) =>{
-        this.notify.show('User enabled',"error");
-        this.isProcessing.set(false);
-      }
+            this.userStore.updateUserStatus(id,StatusEnum.Active);
+            this.notify.show('User enabled',"success");
+            this.isProcessing.set(false);
+          },
+          error:(err) =>{
+            this.notify.show(`Enabling error:${err}`,"error");
+            this.isProcessing.set(false);
+          }
         })
   }
 }

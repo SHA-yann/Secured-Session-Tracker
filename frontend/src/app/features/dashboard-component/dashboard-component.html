@@ -8,13 +8,13 @@
   <div class="flex md:flex-row flex-1 gap-1 md:gap-2 overflow-hidden">
 
     <aside class="flex md:w-70 md:flex-col lg:w-80 h-full min-h-0 rounded-2xl bg-white shadow-md overflow-hidden">
-      <app-user-list (selectedUser)="UserSelection($event)"></app-user-list>
+      <app-user-list></app-user-list>
     </aside>
 
     <main class="flex-1 flex flex-col bg-transparent overflow-y-auto min-h-0">
       @if (selectedUser()) {
         <div class="animate-in fade-in slide-in-from-bottom-4 duration-500 h-full">
-          <app-user-details-view [user]="selectedUser()!"></app-user-details-view>
+          <app-user-details-view ></app-user-details-view>
         </div>
       } @else {
         <div class="flex flex-col items-center justify-center h-full text-slate-400 bg-white rounded-3xl shadow-sm">

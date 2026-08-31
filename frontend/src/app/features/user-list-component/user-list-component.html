@@ -27,7 +27,7 @@
   <div class="flex-1 overflow-y-auto pt-4 scrollbar-thin scrollbar-thumb-slate-200">
     @for (u of users(); track u.id) {
       <app-user-card 
-        [user]="u" [id]="u.id!" [isSelected]="selectedId() === u.id" (select)="onUserSelect($event)">
+        [user]="u" [id]="u.id!" [isSelected]="selectedId() === u.id">
       </app-user-card>
     }
 
