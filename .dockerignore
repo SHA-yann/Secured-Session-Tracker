@@ -1,24 +1,30 @@
-# --- Java / Maven ---
+# --- Frontend (Angular / Node) ---
+**/node_modules
+**/dist
+**/.angular
+.nx/cache
+
+# --- Backend (Java / Maven) ---
 **/target/
 **/*.jar
 **/*.war
-.mvn/
-mvnw
-mvnw.cmd
 
 # --- Logs ---
 **/logs/
 **/*.log
 
 # --- Docker & CI/CD ---
-.git/
-.github/
+.git
+.github
 .gitignore
+Dockerfile*
+docker-compose*
+.dockerignore
 
 # --- IDEs & OS ---
-**/.vscode/
-**/.qodo/
-**/.settings/
+**/.vscode
+**/.qodo
+**/.settings
 **/.classpath
 **/.project
 **/*.iml

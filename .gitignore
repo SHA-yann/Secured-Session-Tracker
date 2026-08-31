@@ -4,7 +4,6 @@
 .classpath
 .project
 .factorypath
-bin/
 *.swp
 *.class
 Thumbs.db
@@ -17,18 +16,14 @@ Thumbs.db
 
 # 3. BACKEND (Java / Maven)
 **/target/
-backend/target/
-.mvn/wrapper/maven-wrapper.jar
-.mvn/
+*.class
 
 # 4. FRONTEND (Angular / Node)
-frontend/node_modules/
-frontend/dist/
+**/node_modules/
+**/dist/
 frontend/.qodo/
 frontend/.angular/
-frontend/.editorconfig
 npm-debug.log*
-
 
 # 5. KUBERNETES & INFRA
 *.kubeconfig

@@ -6,7 +6,7 @@ import { tap } from "rxjs";
 import { PresenceStore } from "../services/presenceStore";
 import { Router } from "@angular/router";
 import { HttpClient } from "@angular/common/http";
-import { environment } from "../../../environments/environment";
+import { ConfigService } from "../services/urlconfig";
 
 export interface TokenPayload {
     sub: string; // username
@@ -26,6 +26,7 @@ export class AuthService{
     private readonly _token = signal<string | null>(localStorage.getItem('jwt_token'));
     private readonly presence = inject(PresenceStore);
     private readonly router = inject(Router);
+    private readonly configService = inject(ConfigService);
     
     readonly userPayload = computed<TokenPayload | null>(() => {
         const token = this._token();
@@ -43,7 +44,9 @@ export class AuthService{
 
     readonly username = computed(() => this.userPayload()?.sub ?? null);
     readonly userId = computed(() => this.userPayload()?.ID ?? null);
+    readonly userStatus = computed(() => this.userPayload()?.uStatus ?? null);
     readonly isAdmin = computed(() => this.userPayload()?.Role.includes('ROLE_ADMIN') || false);
+    
     
     login(credentials: AuthRequest){
         return this.authApi.login({authRequest: credentials}).pipe(
@@ -66,7 +69,7 @@ export class AuthService{
     logout(): void{
 
         this.presence.disconnect();
-        this.http.post<void>(`${environment.backUrl}/auth/logout?id=${this.presence.connectionId}`,{})
+        this.http.post<void>(`${this.configService.apiUrl}/auth/logout?id=${this.presence.connectionId}`,{})
             .subscribe({
                 next:(response) => {
                     console.log('Backend logout successful :'+`${response}`);
