@@ -3,35 +3,54 @@ import { NotificationService } from "../services/notification-service";
 import { catchError, throwError } from "rxjs";
 import { inject } from "@angular/core";
 
+/**
+ * Functional HTTP interceptor handling centralized interception and notification feedback
+ * for network disruptions, system errors (5xx), and client application errors (4xx).
+ */
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
     const notify = inject(NotificationService);
 
-    if(req.url.includes('/notifications/stream'))
-                return next(req);
+    // Bypass SSE/EventSource streaming endpoints to prevent noisy error notifications during reconnection loops
+    if (req.url.includes('/notifications/stream')) {
+        return next(req);
+    }
 
     return next(req).pipe(
-        catchError((error:HttpErrorResponse) =>{
+        catchError((error: HttpErrorResponse) => {
+            let errorMessage = error.error?.message;
 
-            let errorMessage='';
+            switch (error.status) {
+                case 0:
+                    errorMessage ||= "Unable to contact server... Network error.";
+                    notify.show(errorMessage, 'error');
+                    break;
+                case 401:
+                    // Primarily handled by authInterceptor; acts as a fallback if the request bypasses authentication logic
+                    if (!req.url.includes('/auth/login') && !req.url.includes('/auth/refresh')) {
+                        errorMessage ||= "User unauthorized";
+                        notify.show(errorMessage, 'warning');
+                    }
+                    break;
+                case 403:
+                    errorMessage ||= "Forbidden, you can't perform this action";
+                    notify.show(errorMessage, 'warning');
+                    break;
+                case 429:
+                    errorMessage ||= "Too many requests, please wait";
+                    notify.show(errorMessage, 'info');
+                    break;
+                default:
+                    if (error.status >= 500) {
+                        errorMessage ||= "Internal server error";
+                        notify.show(errorMessage, 'error');
+                    } else {
+                        errorMessage ||= `An unexpected error occurred (${error.status})`;
+                        notify.show(errorMessage, 'error');
+                    }
+                    break;
+            }
 
-            if(error.error.status === 401){
-                errorMessage = error.error?.message ?? "User unauthorized";
-                notify.show(errorMessage,'warning');
-            }else if(error.status === 0){
-                errorMessage = error.error?.message ?? "unable to contact Server...Network Error.";
-                notify.show(errorMessage,'error');
-            }else if(error.status >= 500){
-                errorMessage = error.error?.message ?? "Server side error";
-                notify.show(errorMessage,'error');
-            }else if(error.status === 403){
-                errorMessage = error.error?.message ?? "Forbidden, you can't perform this action";
-                notify.show(errorMessage,'warning');
-            }else if(error.status === 429){
-                errorMessage = error.error?.message ?? "Too much requests, please wait";
-                notify.show(errorMessage,'info');
-            }else
-                notify.show(errorMessage,'error');
-        return throwError(() => error);
+            return throwError(() => error);
         })
     );
 };
