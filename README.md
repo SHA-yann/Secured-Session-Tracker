@@ -1,135 +1,100 @@
-# Access management demo Api
+# Secured Session Tracker (SST)
 
-## Project Purpose
-Demonstrate through a simple, authentication via credentials, authorization by JWT token with refresh token and access role based. Exposes secured REST endpoints
-and documented with OpenApi
-**Methodology:** Test-Driven Development (TDD) for one feature
-**Version Control:** Git (feature-branch workflow)
+![Java 17](https://img.shields.io/badge/Java-17-orange.svg)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.5.4-green.svg)
+![Angular](https://img.shields.io/badge/Angular-21-red.svg)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-blue.svg)
+![Docker Compose](https://img.shields.io/badge/Docker_Compose-Supported-2496ED.svg)
+![Grafana](https://img.shields.io/badge/Observability-Prometheus_%2F_Loki_%2F_Grafana-F46800.svg)
 
-## Technologies
-Java 17
-Maven 3.9
-Git 2.49
-Spring Boot 3.5.4
-PostgreSQL 17
-JUnit 5
+**Secured Session Tracker** est une application full-stack entreprise conçue pour l'authentification sécurisée, la gestion des rôles et le suivi de présence utilisateur en temps réel. 
 
-## Development Workflow
-Create feature branch
-Writing one feature with TDD
-Commit frequently with meaningful messages
-Push branch and create Pull Request (PR)
-Merge into `dev` after review
-Merge into `main` after feature completion
-
-## Branching Strategy
-main → stable releases
-dev → integration branch
-feature/* → individual tasks
-
-## Requirements
-java 17
-Git 2.49
-Maven 3.9+
-PostgreSQL 17 / H2(in-memory) for tests
-Postman / Swagger UI via http://localhost:8080/swagger-ui/index.html
-
-## Setup Instructions
- ### 1. clone repository
- git clone https://github.com/SHA-yann/taskmanager
- cd taskmanager
- ### 2. configure database
- install PostgreSQL (runtime), H2(tests)
- create database with a user and password, and configure backend/src/main/resources/application.properties
-
- ### 3. Run
- cd backend
- ./mvnw spring-boot:run for Linux/macOS or mvn spring-boot:run for Windows (if maven is installed, otherwise mvn.cmd)
-
- ## API Documentation
-
- ### Swagger UI
- http://localhost:8080/swagger-ui/index.html
-
- ### OpenAPI JSON
- http://localhost:8080/v3/api-docs
-
- ## Main Endpoints
- 
- | Méthode | Endpoint             | Description                    | Rôle        |   requirements                                |
-| ------- | --------------------- | ------------------------------ | ----------- | ---------------------------------------------
-| GET     | `/users`              |         List all users         | ADMIN/USER  |                                               |
-| POST    | `/users`              |         Create new user        | ADMIN       | uername, password, email,role, status         |
-| GET     | `/users/{id}`         |         Find a user            | ADMIN       | user id                                       |
-| PUT     | `/users/{username}`   |         Update a user          | ADMIN/USER  | username and body(attributs except username)  |
-| DELETE  | `/users/{id}`         |         Delete a user          | ADMIN       | user id                                       |
-| GET     | `/users/search`       | Recherche des utilisateurs avec pagination | ADMIN |`query` (username/role), `page`, `size` |
-
-### Paginated User Search
-Endpoint to search for users by a **keyword** (`username` or `role`) and retrieve results **page by page**.
-
-**Parameters:**
-- `query` (required): keyword to search for
-- `page` (optional): page number (default = 0)
-- `size` (optional): number of results per page (default = 10)
-
-**Example curl:**
-curl -X GET "http://localhost:8080/users/search?query=john&page=0&size=5" \
-  -H "Authorization: Bearer <your_jwt_token>"
+Le système s'appuie sur une architecture réactive non-bloquante (**Spring WebFlux**), un cache in-memory (**Redis**), une persistance relationnelle (**PostgreSQL**) et une pile complète d'observabilité (**Prometheus, Loki, Promtail, Grafana**).
 
 
-## Authentication / refresh
+## Fonctionnalités Clés
 
-| Méthode | Endpoint          | Description                                                      |   requirements                        |
-| ------- | ----------------- | ---------------------------------------------------------------- | -------------------------------------
-| POST    |   `/auth/login`   |                Authenticate a user and return a JWT              | username, password
-| POST    | `/auth/refresh`   | Refresh jwt(expired) with a refreh token a user and return a JWT | expired jwt and cookie(refresh token)
+* **Sécurité Applicative :** Authentification stateless via JWT (Access & Refresh Tokens), contrôle d'accès basé sur les rôles (RBAC : `ROLE_ADMIN`, `ROLE_USER`) et protection anti-brute force via Rate Limiting (Bucket4j).
+* **Temps Réel & Performance :** Notification de présence et statut de connexion diffusés en temps réel au client Angular via Server-Sent Events (SSE).
+* **Interface Réactive :** Dashboard dynamique sous Angular 21 (Architecture Standalone, Signals, RxJS) avec Tailwind CSS v4.
+* **Observabilité :** 
+  * Métriques JVM & WebFlux exposées via Micrometer et Prometheus.
+  * Métriques de serveur Web Nginx via `nginx-exporter`.
+  * Centralisation et agrégation des logs de conteneurs avec Promtail et Loki.
+  * Dashboards et alertes unifiés sur Grafana.
 
 
-## sample requests
-### create a user (curl)
-curl -X POST http://localhost:8080/users \
-  -H "Content-Type: application/json" \
-  -d '{"username":"john","password":"pass123","email":"john@example.com","role":"USER","status":"ACTIVE"}'
+## Architecture Globale
 
-###Authenticatio(get a jwt)
- curl -X POST http://localhost:8080/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"John","password":"pass123"}'
+                      ┌───────────────────────────┐
+                      │     Client Navigateur     │
+                      └─────────────┬─────────────┘
+                                    │ HTTP / SSE (Port 80)
+                                    v
+                      ┌───────────────────────────┐
+                      │    Front-App (Nginx)      │
+                      └──────┬─────────────┬──────┘
+                             │             │
+    http://backend-api:8080  │             │ /stub_status
+                             v             v
+         ┌──────────────────────┐   ┌─────────────────┐
+         │     Backend API      │   │  Nginx Exporter │
+         │  (Spring WebFlux)    │   └────────┬────────┘
+         └───┬──────────────┬───┘            │
+             │              │                │
+    Postgres │        Redis │       Metrics  │
+             v              v                v
+    ┌────────────────┐  ┌───────┐   ┌─────────────────┐
+    │ PostgreSQL 17  │  │ Redis │   │   Prometheus    │
+    └────────────────┘  └───────┘   └────────┬────────┘
+                                             │
+    ┌────────────────┐    Logs               v
+    │ Promtail/Loki  ├───────────► ┌─────────────────┐
+    └────────────────┘             │    Grafana      │
+                                   └─────────────────┘
 
-### Access a secured endpoint with jwt
-curl -X GET http://localhost:8080/users \
-  -H "Authorization: Bearer <your_token_jwt>"
+## Stack Technique
 
-## Advanced Security / Roles
-The API manages Roles and Permissions (e.g., ADMIN, USER), prevent from role escalation / status modification
-Sensitive endpoints (such as user creation or deletion) are restricted to ADMIN users only.
-To test with different roles:
-Create users with role: USER or role: ADMIN.
-Authenticate each user to obtain the corresponding token.
-Include the token in the request header: Authorization: Bearer <token>.
+* **Frontend :** Angular 21, RxJS, Fetch Event Source (SSE), Tailwind CSS v4.
+* **Backend :** Java 17, Spring Boot 3.5.4 (Spring WebFlux, Spring Security).
+* **Sécurité :** JWT, Bucket4j, BCrypt (Work Factor 12).
+* **Persistance & Cache :** PostgreSQL 17, Redis 7 (Letuce reactive).
+* **Infrastructure & Reverse Proxy :** Nginx, Docker, Docker Compose.
+* **Observabilité :** Prometheus 3.10, Grafana 12.4, Loki 3.6, Promtail 3.5.
 
-## Monitoring
-The API exposes a management interface on port 8087
-Sytem health:/actuator/health
-Prometheus metrics:/actuator/prometheus
 
-### Example of a restricted endpoint:
-DELETE /users/{id} → accessible only by an ADMIN user.
-GET /users/mail/{email } → accessible only by an ADMIN user.
+## Démarrage Rapide
 
-## Tests
-Run unit and integration tests:
-./mvnw test  for Linux/macOS or mvn test for Windows (if maven is installed, otherwise mvn.cmd)
-./mvnw verify for Linux/macOS or mvn test for Windows (if maven is installed, otherwise mvn.cmd)
+### Prérequis
+  * [Docker Desktop](https://www.docker.com/products/docker-desktop/) installé avec `docker compose` v2+.
+  * Git.
 
-## Contribution
-1. Fork the project.
-2. Create a branch: git checkout -b feature/my-feature
-3. Commit your changes: git commit -m "Add a new feature"
-4. Push to your branch: git push origin feature/my-feature
-5. Open a Pull Request against the main repository.
+### 1. Cloner le dépôt
+  bash
+  git clone https://github.com/SHA-yann/Secured-Session-Tracker.git
+  cd Secured-Session-Tracker.
+  
+### 2. Configurer l'environnement
+  Créez un fichier .env dans le repertoire backend en vous basant sur l'exemple
+  bash
+  cp .env.example ./backend/.env
 
-## License
+### 3. Build d'images
+  bash
+  docker build -t sst-back:1.0 -f backend/Dockerfile ./backend
+  docker build -t sst-front:1.0 -f frontend/Dockerfile .
 
-MIT License – see file [LICENSE](LICENSE)
+### 4. Lancer la stack
+  bash
+  docker compose --env-file ./backend/.env up -d
+
+### 5. Accéder aux services
+  Application Frontend : http://localhost ( user : David/Emma/Bob/Charlie/Yann password : Password123! )
+
+  API Backend (Swagger UI) : http://localhost:8080/swagger-ui.html
+  Dashboard Grafana : http://localhost:3000 (Identifiants par défaut : admin / admin)
+  Prometheus UI : http://localhost:9090
+
+
+### 6. Documentation Complète
+  Pour consulter le détail de l'architecture, le schéma des flux, référez-vous au fichier TECHNICAL_DOC.md

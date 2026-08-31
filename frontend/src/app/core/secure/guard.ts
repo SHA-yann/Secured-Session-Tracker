@@ -4,34 +4,43 @@ import { NotificationService } from "../services/notification-service";
 import { AuthService } from "./authService";
 import { PresenceStore } from "../services/presenceStore";
 
-export const guard: CanActivateFn = (route,state) =>{
-    const router= inject(Router);
+/**
+ * Functional route guard managing JWT token authentication and Role-Based Access Control (RBAC).
+ */
+export const guard: CanActivateFn = (route, state) => {
+    const router = inject(Router);
     const authService = inject(AuthService);
     const presence = inject(PresenceStore);
     const notify = inject(NotificationService);
-    
 
-    if(!authService.getToken()){
-        notify.show("You are not authenticated!",'warning');
-        if(!router.url.includes('/login')){
-            notify.show("Redirecting to login page.",'info');
-            router.navigate(['/login'], {queryParams:{reason:'Unauthorized user'}});
-        }
+    const payload = authService.userPayload();
+
+    // 1. Verify authentication and JWT token validity
+    if (!payload) {
+        notify.show("You are not authenticated!", 'warning');
+        router.navigate(['/login'], { 
+            queryParams: { reason: 'Unauthorized user', returnUrl: state.url } 
+        });
         return false;
-    } 
-    presence.init();
-    const requiredRoles = route.data['roles'] as string[] | undefined;
-    const userRoles = authService.userPayload()?.Role || [];
-     
-      //console.log('la valeur de requiredRoles est:{}',requiredRoles);
-      //console.log('la valeur de userRoles est:{}',userRoles);
-    if(!requiredRoles || requiredRoles.length === 0)
-       return true;
-
-    if(userRoles.some(role => requiredRoles.includes(role))){
-       return true;
-    }else{
-       notify.show("Forbidden, you can't perform this action",'warning');
-       return false;
     }
-}
+
+    // 2. Idempotent initialization of the SSE presence service
+    presence.init();
+
+    // 3. Verify Role-Based Access Control (RBAC) permissions
+    const requiredRoles = route.data['roles'] as string[] | undefined;
+
+    if (!requiredRoles || requiredRoles.length === 0) {
+        return true;
+    }
+
+    const userRoles = payload.Role || [];
+    const hasRole = userRoles.some(role => requiredRoles.includes(role));
+
+    if (hasRole) {
+        return true;
+    }
+
+    notify.show("Forbidden, you can't perform this action", 'warning');
+    return false;
+};
